@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAccessToken } from '@/lib/auth/jwt'
+import { logAction } from '@/lib/audit/logger'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
@@ -36,14 +37,7 @@ export async function POST(request: NextRequest) {
 
     // Log LOGOUT to audit_log if we have userId
     if (userId) {
-      await prisma.auditLog.create({
-        data: {
-          userId,
-          action: 'LOGOUT',
-          entityType: 'SYSTEM',
-          entityId: null
-        }
-      })
+      await logAction(userId, 'LOGOUT', 'SYSTEM')
     }
 
     // Clear HttpOnly cookie on client

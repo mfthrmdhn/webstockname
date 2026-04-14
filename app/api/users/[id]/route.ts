@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authMiddleware, AuthenticatedRequest } from '@/middleware/auth'
 import { rbacMiddleware } from '@/middleware/rbac'
+import { logAction } from '@/lib/audit/logger'
 import { z } from 'zod'
 
 // Validation schema for updates
@@ -96,14 +97,7 @@ export async function PATCH(
     const req = request as AuthenticatedRequest
 
     // Log USER_EDIT to audit_log
-    await prisma.auditLog.create({
-      data: {
-        userId: req.user!.userId,
-        action: 'USER_EDIT',
-        entityType: 'USER',
-        entityId: id
-      }
-    })
+    await logAction(req.user!.userId, 'USER_EDIT', 'USER', id)
 
     // Return updated user without password
     return NextResponse.json(

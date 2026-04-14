@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authMiddleware, AuthenticatedRequest } from '@/middleware/auth'
 import { rbacMiddleware } from '@/middleware/rbac'
 import { hashPassword } from '@/lib/auth/password'
+import { logAction } from '@/lib/audit/logger'
 import { z } from 'zod'
 
 // Validation schema for password reset
@@ -78,14 +79,7 @@ export async function POST(
     const req = request as AuthenticatedRequest
 
     // Log USER_EDIT to audit_log
-    await prisma.auditLog.create({
-      data: {
-        userId: req.user!.userId,
-        action: 'USER_EDIT',
-        entityType: 'USER',
-        entityId: id
-      }
-    })
+    await logAction(req.user!.userId, 'USER_EDIT', 'USER', id)
 
     return NextResponse.json(
       {

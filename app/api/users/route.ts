@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authMiddleware, AuthenticatedRequest } from '@/middleware/auth'
 import { rbacMiddleware } from '@/middleware/rbac'
 import { hashPassword } from '@/lib/auth/password'
+import { logAction } from '@/lib/audit/logger'
 import { z } from 'zod'
 
 // Validation schemas
@@ -98,14 +99,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Log USER_CREATE to audit_log
-    await prisma.auditLog.create({
-      data: {
-        userId: req.user!.userId,
-        action: 'USER_CREATE',
-        entityType: 'USER',
-        entityId: newUser.id
-      }
-    })
+    await logAction(req.user!.userId, 'USER_CREATE', 'USER', newUser.id)
 
     // Return user without password
     return NextResponse.json(

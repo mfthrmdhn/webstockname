@@ -4,6 +4,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from '@/lib/auth/jwt'
+import { logAction } from '@/lib/audit/logger'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
@@ -60,14 +61,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Log LOGIN to audit_log
-    await prisma.auditLog.create({
-      data: {
-        userId: user.id,
-        action: 'LOGIN',
-        entityType: 'SYSTEM',
-        entityId: null
-      }
-    })
+    await logAction(user.id, 'LOGIN', 'SYSTEM')
 
     // Create response with HttpOnly cookie
     const response = NextResponse.json({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authMiddleware, AuthenticatedRequest } from '@/middleware/auth'
 import { rbacMiddleware } from '@/middleware/rbac'
+import { logAction } from '@/lib/audit/logger'
 
 /**
  * POST /api/users/{id}/deactivate - Deactivate a user (SUPERADMIN only)
@@ -46,14 +47,7 @@ export async function POST(
     const req = request as AuthenticatedRequest
 
     // Log USER_DEACTIVATE to audit_log
-    await prisma.auditLog.create({
-      data: {
-        userId: req.user!.userId,
-        action: 'USER_DEACTIVATE',
-        entityType: 'USER',
-        entityId: id
-      }
-    })
+    await logAction(req.user!.userId, 'USER_DEACTIVATE', 'USER', id)
 
     return NextResponse.json(
       {
