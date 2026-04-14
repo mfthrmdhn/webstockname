@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Role reference table - immutable roles: SUPERADMIN, FINANCE, CASHIER
+model Role {
+  id    String   @id @default(cuid())
+  name  String   @unique // SUPERADMIN, FINANCE, CASHIER
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users User[]
+
+  @@map("roles")
+}
+
+// Users table with role-based access control
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  isActive     Boolean  @default(true) @map("is_active")
+  roleId       String   @map("role_id")
+  role         Role     @relation(fields: [roleId], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  createdBy    String?  @map("created_by") // foreign key to user who created this user
+
+  auditLogs      AuditLog[]
+  refreshTokens  RefreshToken[]
+
+  @@index([roleId])
+  @@map("users")
+}
+
+// Audit log table - append-only design for immutable audit trail
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  action     String   // LOGIN, LOGOUT, USER_CREATE, USER_EDIT, USER_DEACTIVATE, ROLE_ASSIGN
+  entityType String   @map("entity_type") // USER, ROLE, SYSTEM
+  entityId   String?  @map("entity_id") // ID of affected resource, null for system actions
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// Refresh token storage table - for stateless JWT-based authentication
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   // Hash of the refresh token (NOT plaintext)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// Products table - basic product catalog with SKU for barcode lookup
+model Product {
+  id        String   @id @default(cuid())
+  name      String
+  sku       String   @unique // Stock Keeping Unit, unique identifier
+  category  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedBy String?  @map("updated_by") // foreign key to user who last updated
+
+  @@index([sku])
+  @@map("products")
+}
