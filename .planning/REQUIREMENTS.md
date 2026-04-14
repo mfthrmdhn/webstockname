@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Authentication & Access Control
 
-- [ ] **AUTH-01**: Staff member can log in with unique username and password
-- [ ] **AUTH-02**: System maintains active session across page refreshes
-- [ ] **AUTH-03**: Staff member can log out from any page
+- [x] **AUTH-01**: Staff member can log in with unique username and password
+- [x] **AUTH-02**: System maintains active session across page refreshes
+- [x] **AUTH-03**: Staff member can log out from any page
 - [ ] **RBAC-01**: Superadmin role has access to all features and data
 - [ ] **RBAC-02**: Finance role has read-only access to sales reports and incentive data
 - [ ] **RBAC-03**: Cashier role has access only to inventory checking and sales processing
@@ -124,9 +124,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
+| AUTH-03 | Phase 1 | Complete |
 | RBAC-01 | Phase 1 | Pending |
 | RBAC-02 | Phase 1 | Pending |
 | RBAC-03 | Phase 1 | Pending |
