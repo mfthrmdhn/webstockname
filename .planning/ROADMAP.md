@@ -82,7 +82,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 3/9 | In progress | 01-01, 01-02, 01-03 |
 | 2. Operations | 0/TBD | Not started | - |
 | 3. Intelligence | 0/TBD | Not started | - |
 
