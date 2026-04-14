@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/toast'
 import { Users, Package, FileText, LogOut, BarChart3 } from 'lucide-react'
+import { logout } from '@/lib/auth/client'
 
 export function AdminNav() {
   const pathname = usePathname()
@@ -14,22 +15,9 @@ export function AdminNav() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      })
-
-      if (response.ok) {
-        localStorage.removeItem('access_token')
-        localStorage.removeItem('refresh_token')
-        addToast('Logged out successfully', 'success')
-        router.push('/login')
-      } else {
-        addToast('Logout failed', 'error')
-      }
+      await logout()
+      addToast('Logged out successfully', 'success')
+      router.push('/login')
     } catch (error) {
       console.error('Logout error:', error)
       addToast('Logout error', 'error')
