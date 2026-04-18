@@ -8,7 +8,11 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
+  client: {
+    output: "./node_modules/.prisma/client",
+  },
   datasource: {
     url: process.env["DATABASE_URL"],
   },
+  seed: "node prisma/seed.cjs",
 });

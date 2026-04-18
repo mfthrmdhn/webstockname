@@ -5,11 +5,12 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../.prisma/client"
+  output   = "./node_modules/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // Role reference table - immutable roles: SUPERADMIN, FINANCE, CASHIER
