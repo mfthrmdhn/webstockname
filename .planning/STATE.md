@@ -258,6 +258,14 @@ Phase 3: Intelligence    [                        ] 0% - Not started
 
 ---
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260420-001 | Fix login UI centering (globals.css Tailwind v4 syntax) | 2026-04-20 | — | [260420-001-fix-login-centering](./quick/260420-001-fix-login-centering/) |
+
+---
+
 ## Blockers / Risks
 
 **None identified at roadmap stage.**
