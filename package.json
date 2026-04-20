@@ -10,6 +10,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "test:integration": "DATABASE_URL=$DATABASE_URL vitest run __tests__/integration",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.cjs",
     "prisma:studio": "prisma studio"
