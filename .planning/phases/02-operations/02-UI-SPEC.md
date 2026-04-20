@@ -1,7 +1,8 @@
 ---
 phase: 2
 slug: operations
-status: draft
+status: approved
+reviewed_at: 2026-04-20
 shadcn_initialized: false
 preset: none
 created: 2026-04-20
@@ -64,13 +65,13 @@ All sizes are px equivalents of Tailwind utility classes already in use across P
 | Role | Size | Weight | Line Height | Tailwind Class |
 |------|------|--------|-------------|----------------|
 | Body | 14px | 400 (regular) | 1.5 | `text-sm` |
-| Label | 14px | 500 (medium) | 1.4 | `text-sm font-medium` |
+| Label | 14px | 600 (semibold) | 1.4 | `text-sm font-semibold` |
 | Heading | 18px | 600 (semibold) | 1.3 | `text-lg font-semibold` |
-| Display | 30px | 700 (bold) | 1.2 | `text-3xl font-bold` |
+| Display | 30px | 600 (semibold) | 1.2 | `text-3xl font-semibold` |
 
-**Source:** Extracted from Phase 1 component usage — `text-3xl font-bold` on page headings, `text-lg font-semibold` on dialog titles, `text-sm` for body/table content.
+**Source:** Extracted from Phase 1 component usage — `text-3xl` on page headings, `text-lg font-semibold` on dialog titles, `text-sm` for body/table content.
 
-**Constraint:** Use exactly these 4 sizes. Do not introduce new font sizes in Phase 2.
+**Constraint:** Exactly 2 weights: 400 (regular) for Body only; 600 (semibold) for Label, Heading, and Display. Size differentiation (14px / 14px / 18px / 30px) provides sufficient visual hierarchy without additional weight variation. Do not introduce new font sizes or weights in Phase 2.
 
 ---
 
@@ -132,6 +133,8 @@ Reuse Phase 1 components without modification. Add new components only where lis
 
 ### POS Interface (`/cashier/pos`)
 
+**Focal points:** Left panel focal point: search input (auto-focused on page load). Right panel focal point: Complete Sale button (primary action).
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  header: "Point of Sale"                    [Cashier name] [Logout] │
@@ -144,7 +147,7 @@ Reuse Phase 1 components without modification. Add new components only where lis
 │  SKU..."                          │  [CartItem rows]            │
 │                                   │  — product name             │
 │  [Product result list]            │  — qty: [–] [2] [+]         │
-│  — Product name (font-medium)     │  — line total               │
+│  — Product name (font-semibold)   │  — line total               │
 │  — SKU (text-sm text-gray-500)    │  — [x remove]               │
 │  — selling_price (text-sm)        │                             │
 │  — [StockBadge: store/warehouse]  │  ─────────────────────────  │
@@ -207,7 +210,7 @@ Dialog (max-w-md)
   [Textarea rows=3]
   placeholder: "e.g., Weekly restock from warehouse shelf B3"
 
-  [Cancel] [Add Stock] (footer)
+  [Discard Changes] [Add Stock] (footer)
 ```
 
 ---
@@ -223,9 +226,10 @@ Dialog (max-w-md)
 ### Cart quantity controls
 - Display: `[–]` button | numeric display | `[+]` button
 - `[–]` and `[+]` use `Button` variant="outline" size="icon" (`h-8 w-8`)
-- Numeric display: `text-sm font-medium w-8 text-center` (not editable inline)
+- Numeric display: `text-sm font-semibold w-8 text-center` (not editable inline)
 - Minimum quantity: 1 (pressing `[–]` at 1 is disabled, not remove)
 - Remove item: separate `[x]` icon button (`Trash2` icon, `text-red-600`, `h-4 w-4`)
+- Remove undo: on click, immediately remove from cart and show toast "Item removed — Undo" with an "Undo" action link; toast auto-dismisses after 4 seconds; clicking "Undo" restores the item at its previous quantity using the existing toast pattern from Phase 1
 - Source: Claude's Discretion from CONTEXT.md
 
 ### Salesperson picker
@@ -259,7 +263,7 @@ Dialog (max-w-md)
 - `DialogContent` background: `bg-green-50 border-green-200`
 - Contents:
   - `DialogTitle`: "Sale Complete"
-  - Sale total in display typography (`text-3xl font-bold`)
+  - Sale total in display typography (`text-3xl font-semibold`)
   - Itemized list: product name + quantity + line total
   - Salesperson credited: name
   - Payment method + (if Cash) amount received + change given
@@ -284,7 +288,7 @@ Dialog (max-w-md)
 | store_qty === 0 | `bg-red-50 text-red-700 border-red-200` | "Out of stock" |
 | warehouse_qty > 0 | `bg-gray-100 text-gray-600` | "Warehouse: [N]" |
 
-Badge: `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border`
+Badge: `inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold border`
 
 Products with `store_qty === 0` cannot be added to cart — clicking them shows no action (button disabled state, cursor-not-allowed).
 
@@ -314,6 +318,7 @@ Products with `store_qty === 0` cannot be added to cart — clicking them shows 
 | Confirmation dismiss | "Start New Sale" |
 | Confirmation salesperson line | "Credited to: [Name]" |
 | Confirmation change line (cash) | "Change: Rp [amount]" |
+| Remove item undo toast | "Item removed — Undo" (4-second timeout; "Undo" link restores item at previous quantity) |
 
 ### Inventory Management
 
@@ -332,6 +337,7 @@ Products with `store_qty === 0` cannot be added to cart — clicking them shows 
 | Reason label | "Reason / Note *" |
 | Reason placeholder | "e.g., Weekly restock from warehouse shelf B3" |
 | Reason error (too short) | "Please provide a reason (at least 5 characters)" |
+| Replenishment cancel | "Discard Changes" |
 | Replenishment CTA | "Add Stock" |
 | Success toast | "[X] units moved to store floor" |
 | Failure toast | "Could not update stock — please try again" |
@@ -391,6 +397,10 @@ No third-party registry blocks are used in Phase 2. All components are either Ph
 8. **AdminNav "Inventory" link** uses `Warehouse` icon from lucide-react and inserts between "Products" and "Audit Log" in the nav array.
 
 9. **Currency formatting:** All monetary values rendered as `Rp [number]` with no decimal places for IDR. Use `new Intl.NumberFormat('id-ID').format(amount)` for thousands separators.
+
+10. **Search input auto-focuses on page load** — add `autoFocus` attribute to the search input in `ProductSearchPanel`. This establishes the left panel focal point immediately.
+
+11. **Remove item undo:** On Trash2 click, capture the removed item (product + quantity) in a local `removedItem` ref before clearing it from cart state. Show toast with "Undo" action that calls `setCart(prev => [...prev, removedItem])`. Use `setTimeout` to clear the ref after 4 seconds.
 
 ---
 
