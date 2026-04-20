@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Skill(gsd:debug)"
+      "Skill(gsd:debug)",
+      "Bash(curl -s -w '\\\\nStatus: %{http_code}\\\\n' -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"superadmin\",\"password\":\"TestPass123!\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"superadmin\",\"password\":\"TestPass123!\"}')",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(npm run *)"
     ]
   }
 }
