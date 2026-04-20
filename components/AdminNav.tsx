@@ -29,6 +29,7 @@ export function AdminNav() {
   const navItems = [
     { href: '/admin/users', label: 'Users', icon: Users },
     { href: '/admin/products', label: 'Products', icon: Package },
+    { href: '/admin/inventory', label: 'Inventory', icon: BarChart3 },
     { href: '/admin/audit', label: 'Audit Log', icon: FileText },
   ]
 
