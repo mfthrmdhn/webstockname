@@ -38,6 +38,8 @@ model User {
 
   auditLogs      AuditLog[]
   refreshTokens  RefreshToken[]
+  cashierSales     Sale[] @relation("CashierSales")
+  salespersonSales Sale[] @relation("SalespersonSales")
 
   @@index([roleId])
   @@map("users")
@@ -51,6 +53,7 @@ model AuditLog {
   action     String   // LOGIN, LOGOUT, USER_CREATE, USER_EDIT, USER_DEACTIVATE, ROLE_ASSIGN
   entityType String   @map("entity_type") // USER, ROLE, SYSTEM
   entityId   String?  @map("entity_id") // ID of affected resource, null for system actions
+  metadata   Json?
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([userId])
@@ -72,15 +75,57 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-// Products table - basic product catalog with SKU for barcode lookup
+// Products table - product catalog with pricing and stock quantities
 model Product {
-  id        String   @id @default(cuid())
-  name      String
-  sku       String   @unique // Stock Keeping Unit, unique identifier
-  category  String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedBy String?  @map("updated_by") // foreign key to user who last updated
+  id           String    @id @default(cuid())
+  name         String
+  sku          String    @unique
+  category     String?
+  sellingPrice Decimal   @map("selling_price") @db.Decimal(10, 2)
+  cost         Decimal   @db.Decimal(10, 2)
+  storeQty     Int       @default(0) @map("store_qty")
+  warehouseQty Int       @default(0) @map("warehouse_qty")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedBy    String?   @map("updated_by")
+
+  saleItems SaleItem[]
 
   @@index([sku])
+  @@index([name])
   @@map("products")
+}
+
+model Sale {
+  id            String     @id @default(cuid())
+  cashierId     String     @map("cashier_id")
+  cashier       User       @relation("CashierSales", fields: [cashierId], references: [id])
+  salespersonId String     @map("salesperson_id")
+  salesperson   User       @relation("SalespersonSales", fields: [salespersonId], references: [id])
+  paymentMethod String     @map("payment_method")
+  total         Decimal    @db.Decimal(10, 2)
+  itemCount     Int        @map("item_count")
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  items SaleItem[]
+
+  @@index([cashierId])
+  @@index([salespersonId])
+  @@index([createdAt])
+  @@map("sales")
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String   @map("sale_id")
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  productId String   @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Decimal  @map("unit_price") @db.Decimal(10, 2)
+  unitCost  Decimal  @map("unit_cost") @db.Decimal(10, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([saleId])
+  @@index([productId])
+  @@map("sale_items")
 }
