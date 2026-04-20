@@ -8,7 +8,9 @@ import { z } from 'zod'
 const createProductSchema = z.object({
   name: z.string().min(1).max(255),
   sku: z.string().min(3).max(50),
-  category: z.string().min(1).max(100).optional()
+  category: z.string().min(1).max(100).optional(),
+  sellingPrice: z.number().positive('Selling price must be positive'),
+  cost: z.number().min(0, 'Cost must be non-negative'),
 })
 
 /**
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, sku, category } = validation.data
+    const { name, sku, category, sellingPrice, cost } = validation.data
 
     // Check if SKU already exists
     const existingProduct = await prisma.product.findUnique({
@@ -59,6 +61,8 @@ export async function POST(request: NextRequest) {
         name,
         sku,
         category: category || null,
+        sellingPrice,
+        cost,
         updatedBy: req.user?.userId
       }
     })

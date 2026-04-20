@@ -37,6 +37,8 @@ const createProductSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
   sku: z.string().min(3, 'SKU must be at least 3 characters').max(50),
   category: z.string().max(100).optional(),
+  sellingPrice: z.number().positive('Selling price must be positive'),
+  cost: z.number().min(0, 'Cost must be non-negative'),
 })
 
 type CreateProductForm = z.infer<typeof createProductSchema>
@@ -46,7 +48,9 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
-  const [createForm, setCreateForm] = useState<CreateProductForm>({
+  const [newProductSellingPrice, setNewProductSellingPrice] = useState('')
+  const [newProductCost, setNewProductCost] = useState('')
+  const [createForm, setCreateForm] = useState<Omit<CreateProductForm, 'sellingPrice' | 'cost'>>({
     name: '',
     sku: '',
     category: '',
@@ -88,7 +92,11 @@ export default function ProductsPage() {
   const handleCreateProduct = async () => {
     try {
       setCreateErrors({})
-      const validation = createProductSchema.safeParse(createForm)
+      const validation = createProductSchema.safeParse({
+        ...createForm,
+        sellingPrice: parseFloat(newProductSellingPrice),
+        cost: parseFloat(newProductCost),
+      })
 
       if (!validation.success) {
         const errors: Record<string, string> = {}
@@ -123,6 +131,8 @@ export default function ProductsPage() {
       const newProduct = await response.json()
       setProducts([...products, newProduct])
       setCreateForm({ name: '', sku: '', category: '' })
+      setNewProductSellingPrice('')
+      setNewProductCost('')
       setCreateOpen(false)
       addToast('Product created successfully', 'success')
     } catch (error) {
@@ -205,6 +215,38 @@ export default function ProductsPage() {
                   <p className="text-red-600 text-sm mt-1">
                     {createErrors.category}
                   </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="selling-price">Selling Price *</Label>
+                <Input
+                  id="selling-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g. 150000"
+                  value={newProductSellingPrice}
+                  onChange={(e) => setNewProductSellingPrice(e.target.value)}
+                  className="mt-1"
+                />
+                {createErrors.sellingPrice && (
+                  <p className="text-red-600 text-sm mt-1">{createErrors.sellingPrice}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="cost">Cost *</Label>
+                <Input
+                  id="cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g. 80000"
+                  value={newProductCost}
+                  onChange={(e) => setNewProductCost(e.target.value)}
+                  className="mt-1"
+                />
+                {createErrors.cost && (
+                  <p className="text-red-600 text-sm mt-1">{createErrors.cost}</p>
                 )}
               </div>
             </div>
