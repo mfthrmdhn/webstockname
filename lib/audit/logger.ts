@@ -7,7 +7,8 @@ export async function logAction(
   userId: string,
   action: string,
   entityType: string,
-  entityId?: string
+  entityId?: string,
+  metadata?: Record<string, unknown>
 ) {
   const prisma = (await import('@/lib/db')).default
 
@@ -16,7 +17,8 @@ export async function logAction(
       userId,
       action,
       entityType,
-      entityId: entityId || null
+      entityId: entityId || null,
+      metadata: metadata || null,
     }
   })
 }
