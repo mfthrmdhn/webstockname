@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authMiddleware, AuthenticatedRequest } from '@/middleware/auth'
 import { rbacMiddleware } from '@/middleware/rbac'
-import { logAction } from '@/lib/audit/logger'
 import { z } from 'zod'
 
 const replenishSchema = z.object({
@@ -55,28 +54,23 @@ export async function POST(request: NextRequest) {
         },
       })
 
+      await tx.auditLog.create({
+        data: {
+          userId: req.user!.userId,
+          action: 'INVENTORY_REPLENISH',
+          entityType: 'PRODUCT',
+          entityId: productId,
+          metadata: {
+            qty_moved: quantity,
+            reason,
+            before: { storeQty: product.storeQty, warehouseQty: product.warehouseQty },
+            after: { storeQty: updated.storeQty, warehouseQty: updated.warehouseQty },
+          },
+        },
+      })
+
       return { product, updated }
     })
-
-    // Audit log with before/after quantities
-    await logAction(
-      req.user!.userId,
-      'INVENTORY_REPLENISH',
-      'PRODUCT',
-      productId,
-      {
-        qty_moved: quantity,
-        reason,
-        before: {
-          storeQty: result.product.storeQty,
-          warehouseQty: result.product.warehouseQty,
-        },
-        after: {
-          storeQty: result.updated.storeQty,
-          warehouseQty: result.updated.warehouseQty,
-        },
-      }
-    )
 
     return NextResponse.json(
       {
