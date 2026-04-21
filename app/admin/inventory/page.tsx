@@ -43,7 +43,7 @@ export default function InventoryPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const fetchInventory = useCallback(async () => {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem('accessToken')
     if (!token) return
     try {
       setLoading(true)
@@ -84,7 +84,7 @@ export default function InventoryPage() {
 
     setSubmitting(true)
     try {
-      const token = localStorage.getItem('access_token')
+      const token = localStorage.getItem('accessToken')
       if (!token) {
         addToast('Not authenticated', 'error')
         return

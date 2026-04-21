@@ -59,7 +59,7 @@ export default function ProductsPage() {
 
   // Fetch products
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem('accessToken')
     if (!token) return
 
     const fetchProducts = async () => {
@@ -107,7 +107,7 @@ export default function ProductsPage() {
         return
       }
 
-      const token = localStorage.getItem('access_token')
+      const token = localStorage.getItem('accessToken')
       if (!token) {
         addToast('Not authenticated', 'error')
         return

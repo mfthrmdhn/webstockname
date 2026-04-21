@@ -74,7 +74,7 @@ export default function AuditPage() {
 
   // Fetch users for filter
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem('accessToken')
     if (!token) return
 
     const fetchUsers = async () => {
@@ -99,7 +99,7 @@ export default function AuditPage() {
 
   // Fetch audit logs
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem('accessToken')
     if (!token) return
 
     const fetchLogs = async () => {

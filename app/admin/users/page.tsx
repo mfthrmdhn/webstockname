@@ -89,7 +89,7 @@ export default function UsersPage() {
 
   // Fetch users
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem('accessToken')
     if (!token) return
 
     const fetchUsers = async () => {
@@ -133,7 +133,7 @@ export default function UsersPage() {
         return
       }
 
-      const token = localStorage.getItem('access_token')
+      const token = localStorage.getItem('accessToken')
       if (!token) {
         addToast('Not authenticated', 'error')
         return
@@ -182,7 +182,7 @@ export default function UsersPage() {
         return
       }
 
-      const token = localStorage.getItem('access_token')
+      const token = localStorage.getItem('accessToken')
       if (!token) {
         addToast('Not authenticated', 'error')
         return
@@ -223,7 +223,7 @@ export default function UsersPage() {
     if (!selectedUser) return
 
     try {
-      const token = localStorage.getItem('access_token')
+      const token = localStorage.getItem('accessToken')
       if (!token) {
         addToast('Not authenticated', 'error')
         return
