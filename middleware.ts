@@ -1,61 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAccessToken } from '@/lib/auth/jwt'
+import { jwtVerify } from 'jose'
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'dev-secret-change-in-production'
+)
+
+async function getRole(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    return (payload as { role?: string }).role ?? null
+  } catch {
+    return null
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+  const token = request.cookies.get('access_token')?.value
 
-  // Only protect /admin routes
   if (pathname.startsWith('/admin')) {
-    const token = request.cookies.get('access_token')?.value
-
-    if (!token) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-
-    try {
-      const payload = verifyAccessToken(token)
-
-      // Check if user has SUPERADMIN role
-      if (payload.role !== 'SUPERADMIN') {
-        return NextResponse.redirect(new URL('/login', request.url))
-      }
-
-      // Token is valid and user is SUPERADMIN, continue
-      return NextResponse.next()
-    } catch (error) {
-      // Invalid token, redirect to login
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
+    if (!token) return NextResponse.redirect(new URL('/login', request.url))
+    const role = await getRole(token)
+    if (role !== 'SUPERADMIN') return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.next()
   }
 
   if (pathname.startsWith('/cashier')) {
-    const token = request.cookies.get('access_token')?.value
     if (!token) return NextResponse.redirect(new URL('/login', request.url))
-
-    try {
-      const payload = verifyAccessToken(token)
-      if (!['CASHIER', 'SUPERADMIN'].includes(payload.role)) {
-        return NextResponse.redirect(new URL('/login', request.url))
-      }
-      return NextResponse.next()
-    } catch {
+    const role = await getRole(token)
+    if (!role || !['CASHIER', 'SUPERADMIN'].includes(role)) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
+    return NextResponse.next()
   }
 
   if (pathname.startsWith('/finance')) {
-    const token = request.cookies.get('access_token')?.value
     if (!token) return NextResponse.redirect(new URL('/login', request.url))
-
-    try {
-      const payload = verifyAccessToken(token)
-      if (!['FINANCE', 'SUPERADMIN'].includes(payload.role)) {
-        return NextResponse.redirect(new URL('/login', request.url))
-      }
-      return NextResponse.next()
-    } catch {
+    const role = await getRole(token)
+    if (!role || !['FINANCE', 'SUPERADMIN'].includes(role)) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
+    return NextResponse.next()
   }
 
   return NextResponse.next()
