@@ -1,208 +1,237 @@
 ---
 phase: 02-operations
-reviewed: 2026-04-20T00:00:00Z
+reviewed: 2026-04-21T00:00:00Z
 depth: standard
-files_reviewed: 9
+files_reviewed: 12
 files_reviewed_list:
-  - prisma/schema.prisma
+  - app/api/admin/inventory/replenish/route.ts
+  - app/api/admin/inventory/route.ts
   - lib/audit/logger.ts
-  - lib/db.ts
   - middleware.ts
-  - app/cashier/layout.tsx
-  - app/cashier/pos/page.tsx
-  - app/admin/inventory/page.tsx
-  - components/AdminNav.tsx
-  - app/admin/products/page.tsx
-  - app/api/products/route.ts
+  - prisma/schema.prisma
+  - __tests__/endpoints/cashier-staff.test.ts
+  - __tests__/endpoints/inventory.test.ts
+  - __tests__/endpoints/sales.test.ts
+  - __tests__/integration/concurrent-sale.test.ts
+  - __tests__/unit/audit.test.ts
+  - __tests__/unit/inventory.test.ts
+  - __tests__/unit/sales.test.ts
 findings:
   critical: 2
-  warning: 5
-  info: 4
-  total: 11
+  warning: 3
+  info: 3
+  total: 8
 status: issues_found
 ---
 
 # Phase 02: Code Review Report
 
-**Reviewed:** 2026-04-20
+**Reviewed:** 2026-04-21T00:00:00Z
 **Depth:** standard
-**Files Reviewed:** 9 (5 of 14 listed files do not exist yet — see note below)
+**Files Reviewed:** 12
 **Status:** issues_found
-
-## Scope Note
-
-Five files listed in scope do not exist and were not reviewed:
-- `app/api/cashier/products/route.ts`
-- `app/api/cashier/staff/route.ts`
-- `app/api/cashier/sales/route.ts`
-- `app/api/admin/inventory/route.ts`
-- `app/api/admin/inventory/replenish/route.ts`
-
-These are Phase 2 API routes that have not been created yet. The POS page (`app/cashier/pos/page.tsx`) and inventory page (`app/admin/inventory/page.tsx`) both call these endpoints, meaning the frontend is built against APIs that do not exist. This is likely intentional (UI-first development), but the missing routes represent a gap that must be filled for the system to function. Issues related to those contracts are flagged below.
-
----
 
 ## Summary
 
-Nine source files were reviewed. The existing files cover the Prisma schema, audit logger, JWT middleware, cashier POS UI, admin inventory UI, admin products UI, navigation, and the products API route. The most significant issues are: (1) the cashier `/pos` route has no authentication guard in `middleware.ts`, allowing unauthenticated access, and (2) the POS page performs client-side stock quantity enforcement but the backend APIs that enforce it do not exist yet, creating a trust boundary gap. Several secondary issues exist around token storage, authorization checks in API routes, and type safety.
+Reviewed the Phase 02 operations surface: two admin inventory API routes (`/api/admin/inventory` GET and `/api/admin/inventory/replenish` POST), the audit logger, Next.js middleware, Prisma schema, and the full test suite. The inventory replenishment logic is well-structured with a proper `$transaction` block and before/after audit capture. The schema is clean and well-indexed.
+
+Two critical issues were identified: (1) the `logAction` audit call is placed outside the database transaction, creating a window where the inventory update commits but the audit record silently fails; (2) the FINANCE role has no middleware route guard, so finance users can access any page not protected by per-route RBAC. Three warnings cover a TOCTOU concurrency gap in the warehouse stock check, an unhandled `logAction` rejection that masks partial failures, and the structural-only test suite that exercises no actual handler code. Three info items cover a missing `updatedAt` field on `Product`, stray `console.error` calls, and a non-null assertion on `req.user`.
 
 ---
 
 ## Critical Issues
 
-### CR-01: Cashier POS route is unauthenticated — middleware only protects `/admin`
+### CR-01: Audit log written outside transaction — silent audit loss on inventory commit
 
-**File:** `middleware.ts:8`
-**Issue:** The middleware only adds auth guards for paths starting with `/admin`. The cashier POS at `/cashier/*` has no protection. Any unauthenticated user can access the cashier POS in the browser. The `pos/page.tsx` does call `getAccessToken()` before each fetch, but there is no server-side redirect enforcing authentication — a user who loads the page without a token will simply see an empty staff list and search results, with no redirect to login.
-**Fix:**
+**File:** `app/api/admin/inventory/replenish/route.ts:62-79`
+**Issue:** `logAction(...)` is called after `prisma.$transaction(...)` resolves, outside any transaction scope. If the `auditLog.create` write fails (DB connection drop, constraint violation, disk full), the inventory transfer has already committed with no audit record. A compliance-oriented system that bills itself as maintaining an immutable audit trail cannot allow silent audit loss on state-changing operations.
+
+**Fix:** Move the audit log write inside the transaction so it commits atomically with the inventory update:
+
 ```typescript
-if (pathname.startsWith('/admin')) {
-  // existing SUPERADMIN check
-}
+const result = await prisma.$transaction(async (tx) => {
+  const product = await tx.product.findUnique({ where: { id: productId } })
+  if (!product) throw new Error('PRODUCT_NOT_FOUND')
 
-if (pathname.startsWith('/cashier')) {
-  const token = request.cookies.get('access_token')?.value
-  if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  if (product.warehouseQty < quantity) {
+    throw new Error(`Insufficient warehouse stock. Only ${product.warehouseQty} available.`)
   }
+
+  const updated = await tx.product.update({
+    where: { id: productId },
+    data: {
+      storeQty: { increment: quantity },
+      warehouseQty: { decrement: quantity },
+    },
+  })
+
+  // Inside transaction — rolls back together if audit write fails
+  await tx.auditLog.create({
+    data: {
+      userId: req.user!.userId,
+      action: 'INVENTORY_REPLENISH',
+      entityType: 'PRODUCT',
+      entityId: productId,
+      metadata: {
+        qty_moved: quantity,
+        reason,
+        before: { storeQty: product.storeQty, warehouseQty: product.warehouseQty },
+        after: { storeQty: updated.storeQty, warehouseQty: updated.warehouseQty },
+      },
+    },
+  })
+
+  return { product, updated }
+})
+```
+
+---
+
+### CR-02: FINANCE role has no middleware route guard — unprotected page access
+
+**File:** `middleware.ts:1-51`
+**Issue:** The middleware defines route guards only for `/admin/:path*` (SUPERADMIN) and `/cashier/:path*` (CASHIER or SUPERADMIN). There is no guard for any finance-facing routes (e.g., `/finance/:path*`). A FINANCE-role user — or any authenticated or unauthenticated user — can navigate to finance pages without being challenged at the middleware layer. Protection then depends entirely on per-route RBAC middleware, meaning any finance route that omits the RBAC check is fully open.
+
+**Fix:** Add a FINANCE route guard and update the matcher config:
+
+```typescript
+if (pathname.startsWith('/finance')) {
+  const token = request.cookies.get('access_token')?.value
+  if (!token) return NextResponse.redirect(new URL('/login', request.url))
+
   try {
     const payload = verifyAccessToken(token)
-    // Optionally check payload.role === 'CASHIER' or any authenticated user
+    if (!['FINANCE', 'SUPERADMIN'].includes(payload.role)) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
     return NextResponse.next()
   } catch {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 }
 ```
-Also update the matcher:
+
 ```typescript
 export const config = {
-  matcher: ['/admin/:path*', '/cashier/:path*'],
+  matcher: ['/admin/:path*', '/cashier/:path*', '/finance/:path*'],
 }
 ```
-
-### CR-02: `app/api/products` GET endpoint has no role-based authorization — exposes cost data risk
-
-**File:** `app/api/products/route.ts:97-138`
-**Issue:** The GET handler authenticates (requires a valid JWT) but does not restrict by role. Any authenticated user — including cashiers — can call `GET /api/products`. While the current response shape omits `cost` and `sellingPrice` (returns only `id, name, sku, category, createdAt`), the `where: any` typed filter on line 108 accepts arbitrary query params. More importantly, the absence of role enforcement here is inconsistent with the POST handler (which correctly requires `SUPERADMIN`), and if the select clause is ever extended (e.g., to add price for a different use case), cost data would leak to cashier-role users. The pattern should be made explicit.
-**Fix:** Add an explicit role check or at minimum add a type-safe where clause. If this endpoint is intended to be accessible to all authenticated roles, document it explicitly:
-```typescript
-// Acceptable roles: SUPERADMIN, FINANCE, CASHIER (read-only product catalog)
-// Cost and price fields intentionally excluded from response
-
-// Replace `const where: any = {}` with:
-const where: { category?: string; sku?: string } = {}
-```
-And ensure the select clause never includes `cost` for non-SUPERADMIN callers.
 
 ---
 
 ## Warnings
 
-### WR-01: `localStorage` used for token storage instead of HttpOnly cookies — XSS risk
+### WR-01: TOCTOU gap — warehouse stock check is not serialized against concurrent replenishment
 
-**File:** `app/admin/inventory/page.tsx:46`, `app/admin/products/page.tsx:62`, `app/admin/products/page.tsx:110`
-**Issue:** Both admin pages read the access token via `localStorage.getItem('access_token')`. The CLAUDE.md security defaults explicitly require HttpOnly cookies for JWT storage ("Cookies for JWT storage (instead of HttpOnly) — Vulnerable to XSS"). Using `localStorage` exposes the token to any JavaScript running on the page, which is an XSS vector. Note: `app/cashier/pos/page.tsx` correctly uses `getAccessToken()` from `@/lib/auth/client` — the admin pages should use the same abstraction.
-**Fix:** Replace `localStorage.getItem('access_token')` with the shared `getAccessToken()` from `@/lib/auth/client` in both admin pages:
+**File:** `app/api/admin/inventory/replenish/route.ts:39-56`
+**Issue:** The warehouse stock check reads `product.warehouseQty` with a plain `findUnique` (no `SELECT FOR UPDATE`). Prisma interactive transactions use `READ COMMITTED` isolation in PostgreSQL by default. Two concurrent replenishment requests can both read `warehouseQty = 10`, both pass the `>= quantity` guard for quantity 10, and both issue a `decrement` — leaving `warehouseQty = -10`. The Prisma `decrement` itself is atomic, but the read-then-validate pattern before it is not serialized.
+
+**Fix:** Lock the row before reading inside the transaction, or add a database-level CHECK constraint as a safety net:
+
 ```typescript
-import { getAccessToken } from '@/lib/auth/client'
-// ...
-const token = getAccessToken()
-```
-
-### WR-02: POS page does not enforce stock limits server-side — oversell risk when APIs are created
-
-**File:** `app/cashier/pos/page.tsx:347-350`
-**Issue:** The `+` button for cart quantity is disabled when `item.quantity >= item.storeQty`, which is a good client-side guard. However, `storeQty` in the cart item is captured at the time the product is added to the cart (line 122: `storeQty: product.storeQty`). If another cashier sells the same item between the time the first cashier adds it to cart and submits checkout, the stock level shown is stale. The enforcement must happen at the sale submission API (`/api/cashier/sales`), which does not exist yet. When that route is implemented, it must validate stock availability inside a database transaction before decrementing.
-**Fix:** When implementing `app/api/cashier/sales/route.ts`, use a Prisma transaction that locks the product row and checks `storeQty >= requestedQuantity` before creating the sale and decrementing stock:
-```typescript
-await prisma.$transaction(async (tx) => {
-  for (const item of items) {
-    const product = await tx.product.findUnique({ where: { id: item.productId } })
-    if (!product || product.storeQty < item.quantity) {
-      throw new Error(`Insufficient stock for ${item.productId}`)
-    }
-    await tx.product.update({
-      where: { id: item.productId },
-      data: { storeQty: { decrement: item.quantity } }
-    })
-  }
-  // create Sale and SaleItems...
-})
-```
-
-### WR-03: Schema has no `updatedAt` on `Product` — audit trail is incomplete
-
-**File:** `prisma/schema.prisma:79-96`
-**Issue:** The `Product` model has `updatedBy` (who last modified it) but no `updatedAt` timestamp. Inventory replenishment will update `storeQty` and `warehouseQty`, but there is no way to know when the last update occurred. For a financial/inventory system this is a meaningful audit gap — the `AuditLog` captures the event, but the product record itself has no modification timestamp.
-**Fix:** Add `updatedAt` to the Product model:
-```prisma
-updatedAt    DateTime  @updatedAt @map("updated_at")
-```
-
-### WR-04: `AuditLog` model has no `entityType` index — slow queries on large audit tables
-
-**File:** `prisma/schema.prisma:49-62`
-**Issue:** The `AuditLog` table indexes `userId` and `createdAt` but not `entityType` or `action`. As the audit log grows (every sale, every inventory replenishment, every product create will produce entries), filtering by `entityType = 'PRODUCT'` or `action = 'SALE_CREATE'` — common admin report queries — will require full table scans.
-**Fix:**
-```prisma
-@@index([entityType])
-@@index([action])
-```
-
-### WR-05: `handleReplenish` in inventory page does not reset `submitting` state on early return
-
-**File:** `app/admin/inventory/page.tsx:73-127`
-**Issue:** When `qty < 1` (line 76-79) or `!replenishReason.trim()` (line 80-83) validation fails, the function returns early before calling `setSubmitting(true)`, so `submitting` remains `false` — this is actually fine. However, on lines 88-91, if `!token`, the function returns early *after* `setSubmitting(true)` (line 85) without ever calling `setSubmitting(false)`. This leaves the button permanently in the "Replenishing..." disabled state until the dialog is closed and reopened.
-**Fix:**
-```typescript
-if (!token) {
-  addToast('Not authenticated', 'error')
-  setSubmitting(false)  // add this line
-  return
+// Option A: row-level lock inside transaction
+const [lockedProduct] = await tx.$queryRaw<Array<{ id: string; warehouseQty: number; storeQty: number }>>`
+  SELECT id, warehouse_qty AS "warehouseQty", store_qty AS "storeQty"
+  FROM products WHERE id = ${productId} FOR UPDATE
+`
+if (!lockedProduct) throw new Error('PRODUCT_NOT_FOUND')
+if (lockedProduct.warehouseQty < quantity) {
+  throw new Error(`Insufficient warehouse stock. Only ${lockedProduct.warehouseQty} available.`)
 }
+
+// Option B: add a migration with CHECK constraint as a last-resort guard
+-- ALTER TABLE products ADD CONSTRAINT warehouse_qty_non_negative CHECK (warehouse_qty >= 0);
+```
+
+---
+
+### WR-02: `logAction` rejection propagates into the wrong catch branch — masks replenishment success
+
+**File:** `app/api/admin/inventory/replenish/route.ts:62`
+**Issue:** The `await logAction(...)` call (current placement, outside the transaction) is not wrapped in its own try/catch. If `logAction` throws, the error propagates to the outer catch at line 89. At that point the inventory update has already committed successfully. The handler will return a 500 response, causing the caller to believe the replenishment failed when it actually succeeded. This silently corrupts the caller's state.
+
+**Fix:** Wrap `logAction` in its own try/catch so inventory success and audit success are handled independently (pending resolution of CR-01):
+
+```typescript
+try {
+  await logAction(req.user!.userId, 'INVENTORY_REPLENISH', 'PRODUCT', productId, { ... })
+} catch (auditError) {
+  console.error('Audit log failed for replenishment:', productId, auditError)
+  // Do not re-throw — inventory committed successfully; audit failure is a secondary concern
+}
+```
+
+---
+
+### WR-03: Endpoint tests are structural assertions only — no handler code is exercised
+
+**File:** `__tests__/endpoints/cashier-staff.test.ts`, `__tests__/endpoints/inventory.test.ts`, `__tests__/endpoints/sales.test.ts`
+**Issue:** Every endpoint test constructs a hardcoded response object literal and asserts on it (e.g., `const response = { status: 403, body: { error: 'Insufficient permissions' } }; expect(response.status).toBe(403)`). No actual route handler is called, no Prisma is mocked, no HTTP request is made. These tests cannot catch regressions in `replenish/route.ts` or `inventory/route.ts`. The suite gives a misleading impression of coverage. This is particularly notable since the concurrent-sale integration tests (correctly marked `it.todo`) demonstrate that the team knows how to write real integration tests.
+
+**Fix:** Use `next-test-api-route-handler` (or import route handler functions directly and call them with a mocked `NextRequest`) combined with Vitest's module mocking for Prisma:
+
+```typescript
+import { POST } from '@/app/api/admin/inventory/replenish/route'
+import { vi } from 'vitest'
+
+vi.mock('@/lib/db', () => ({ default: { $transaction: vi.fn(), product: { findUnique: vi.fn() } } }))
+
+it('returns 400 when warehouse stock insufficient', async () => {
+  const req = new Request('http://localhost/api/admin/inventory/replenish', {
+    method: 'POST',
+    body: JSON.stringify({ productId: 'p1', quantity: 100, reason: 'restock' }),
+  })
+  const res = await POST(req as any)
+  expect(res.status).toBe(400)
+})
 ```
 
 ---
 
 ## Info
 
-### IN-01: `lib/audit/logger.ts` imports Prisma client dynamically on every call
+### IN-01: `Product` schema is missing `updatedAt` — no modification timestamp on inventory records
 
-**File:** `lib/audit/logger.ts:13`
-**Issue:** `logAction` uses a dynamic `await import('@/lib/db')` on every invocation. Since `lib/db.ts` already implements the singleton pattern (global prisma client), a static import would be cleaner and avoids the dynamic import overhead on each audit log write.
+**File:** `prisma/schema.prisma:79-96`
+**Issue:** The `Product` model has `createdAt` and the manual `updatedBy` string field, but no `updatedAt DateTime @updatedAt`. Inventory replenishment updates `storeQty` and `warehouseQty` without recording when. For financial reporting and audit purposes, knowing when a product record was last modified is valuable independently of the `AuditLog` table.
+
 **Fix:**
-```typescript
-import prisma from '@/lib/db'
-
-export async function logAction(...) {
-  return prisma.auditLog.create({ ... })
+```prisma
+model Product {
+  // ...
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  updatedBy    String?   @map("updated_by")
 }
 ```
 
-### IN-02: `app/api/products/route.ts` uses `where: any` type
+---
 
-**File:** `app/api/products/route.ts:108`
-**Issue:** `const where: any = {}` disables type safety on the Prisma where clause. This is a code quality issue that could mask filter logic bugs.
-**Fix:**
-```typescript
-const where: { category?: string; sku?: string } = {}
-```
+### IN-02: `console.error` used in production route handlers
 
-### IN-03: `components/AdminNav.tsx` has `console.error` for logout errors
+**File:** `app/api/admin/inventory/replenish/route.ts:97`, `app/api/admin/inventory/route.ts:32`
+**Issue:** Both routes use `console.error` directly. The project's CLAUDE.md recommends `winston` or `pino` for structured logging with severity metadata and log correlation. Raw `console.error` lacks request IDs and structured output needed for log aggregation in production.
 
-**File:** `components/AdminNav.tsx:22`
-**Issue:** `console.error('Logout error:', error)` should be removed or replaced with structured logging before production. It will leak error stack traces in browser devtools.
-**Fix:** Remove the `console.error` call; the `addToast('Logout error', 'error')` on line 23 already communicates the failure to the user.
-
-### IN-04: `SaleItem` schema stores `unitCost` but `Sale.total` does not store profit margin
-
-**File:** `prisma/schema.prisma:117-131`
-**Issue:** `SaleItem` correctly stores both `unitPrice` and `unitCost`, enabling per-item margin calculation. However `Sale` only stores `total` (revenue), not total cost or profit. Finance reports will need to JOIN and aggregate `SaleItem.unitCost * SaleItem.quantity` for every sale to compute profit, which becomes expensive at scale. Consider whether a denormalized `totalCost` on `Sale` is worthwhile for reporting performance.
-**Fix (optional for Phase 2):** Add a `totalCost Decimal` field to the `Sale` model, populated at sale creation time, to enable O(1) profit margin lookups per sale without JOINs.
+**Fix:** Replace with the project's structured logger when implemented. At minimum, add a request identifier to error output for correlation.
 
 ---
 
-_Reviewed: 2026-04-20_
+### IN-03: Non-null assertion `req.user!.userId` lacks an explicit guard
+
+**File:** `app/api/admin/inventory/replenish/route.ts:63`
+**Issue:** `req.user!.userId` uses TypeScript's non-null assertion operator. The `user` property is populated by `authMiddleware` — if that middleware is ever refactored or bypassed in a test context, this will throw at runtime with an unhelpful `TypeError: Cannot read properties of undefined`. The assertion suppresses the compiler check that would otherwise surface this.
+
+**Fix:** Add an explicit guard before the audit call:
+
+```typescript
+if (!req.user) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+}
+// req.user is now safely narrowed — no assertion needed
+await logAction(req.user.userId, ...)
+```
+
+---
+
+_Reviewed: 2026-04-21T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
