@@ -1,6 +1,12 @@
 /**
  * Audit logging utility for immutable audit trail
  * All state-changing operations should call logAction to maintain compliance audit trail
+ *
+ * Registered action types:
+ *   USER_CREATE, USER_EDIT, USER_DEACTIVATE, ROLE_ASSIGN
+ *   LOGIN, LOGOUT
+ *   SALE_CREATE, INVENTORY_UPDATE
+ *   INCENTIVE_CREATE  -- Phase 3: incentive record creation by Superadmin (INCENT-03, AUDIT-04)
  */
 
 export async function logAction(
