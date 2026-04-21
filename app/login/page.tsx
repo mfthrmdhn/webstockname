@@ -7,6 +7,25 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
+function getRoleFromToken(token: string | null): string | null {
+  if (!token) return null
+  try {
+    return JSON.parse(atob(token.split('.')[1])).role
+  } catch {
+    return null
+  }
+}
+
+function redirectByRole(role: string | null, router: ReturnType<typeof useRouter>) {
+  if (role === 'FINANCE') {
+    router.push('/finance/reports')
+  } else if (role === 'CASHIER') {
+    router.push('/cashier/pos')
+  } else {
+    router.push('/admin/users')
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [username, setUsername] = useState('')
@@ -19,7 +38,8 @@ export default function LoginPage() {
   useEffect(() => {
     const token = localStorage.getItem('accessToken')
     if (token) {
-      router.push('/dashboard')
+      const role = getRoleFromToken(token)
+      redirectByRole(role, router)
     } else {
       setIsChecking(false)
     }
@@ -32,8 +52,11 @@ export default function LoginPage() {
 
     try {
       await login(username, password)
-      router.push('/dashboard')
-    } catch (err) {
+      // Decode role from JWT to route to correct dashboard
+      const token = localStorage.getItem('accessToken')
+      const role = getRoleFromToken(token)
+      redirectByRole(role, router)
+    } catch {
       setError('Invalid username or password')
     } finally {
       setLoading(false)
@@ -94,7 +117,7 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-sm text-gray-600 mt-4">
-            Demo credentials: superadmin / Password123
+            Demo credentials: superadmin / TestPass123!
           </p>
         </div>
       </div>
