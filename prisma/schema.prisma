@@ -40,6 +40,8 @@ model User {
   refreshTokens  RefreshToken[]
   cashierSales     Sale[] @relation("CashierSales")
   salespersonSales Sale[] @relation("SalespersonSales")
+  salespersonIncentives Incentive[] @relation("SalespersonIncentives")
+  enteredIncentives     Incentive[] @relation("EnteredByIncentives")
 
   @@index([roleId])
   @@map("users")
@@ -128,4 +130,20 @@ model SaleItem {
   @@index([saleId])
   @@index([productId])
   @@map("sale_items")
+}
+
+model Incentive {
+  id            String   @id @default(cuid())
+  salespersonId String   @map("salesperson_id")
+  salesperson   User     @relation("SalespersonIncentives", fields: [salespersonId], references: [id])
+  enteredById   String   @map("entered_by_id")
+  enteredBy     User     @relation("EnteredByIncentives", fields: [enteredById], references: [id])
+  amount        Decimal  @db.Decimal(10, 2)
+  date          DateTime @db.Date
+  note          String
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([salespersonId])
+  @@index([date])
+  @@map("incentives")
 }
