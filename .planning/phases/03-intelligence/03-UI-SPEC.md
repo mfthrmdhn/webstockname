@@ -33,6 +33,7 @@ Declared values (must be multiples of 4):
 |-------|-------|-------|
 | xs | 4px | Icon gaps, badge internal padding, inline spacing |
 | sm | 8px | Compact element spacing, button icon gap |
+| table-cell-v | 12px | Table cell vertical padding — balances row density without crowding (justified exception: dense report tables) |
 | md | 16px | Default element spacing, filter field gap |
 | lg | 24px | Section padding, card internal padding |
 | xl | 32px | Layout gaps, page section separation |
@@ -41,27 +42,33 @@ Declared values (must be multiples of 4):
 
 Exceptions:
 - Sidebar nav width: 256px (w-64) — matches existing AdminNav pattern
-- Touch targets (filter buttons, pagination): minimum 36px height (matches shadcn sm button)
+- Touch targets (filter buttons, pagination): minimum 36px height — matches shadcn sm button default; added to spacing set as a justified exception for interactive touch targets per WCAG 2.5.5 guidance
 - Table cell padding: 16px horizontal, 12px vertical — matches existing audit table pattern
 
 ---
 
 ## Typography
 
-Matches existing codebase patterns detected in AdminNav and audit/page.tsx:
+Matches existing codebase patterns detected in AdminNav and audit/page.tsx.
+
+**Exactly 2 weights are used across this phase:**
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px (text-sm) | 400 (regular) | 1.5 |
-| Label | 14px (text-sm) | 500 (medium) | 1.4 |
-| Heading (page) | 30px (text-3xl) | 700 (bold) | 1.2 |
+| Heading (page) | 30px (text-3xl) | 600 (semibold) | 1.2 |
 | Heading (section) | 18px (text-lg) | 600 (semibold) | 1.3 |
+| Label / Emphasis | 14px (text-sm) | 600 (semibold) | 1.4 |
+
+Weight assignment rules:
+- **400 (regular):** body text, timestamps, table cells, secondary descriptors, placeholder text
+- **600 (semibold):** headings, section headers, form labels, emphasis values (totals, salesperson name, currency amounts), variance output
 
 Notes:
-- Page headings use `text-3xl font-bold text-gray-900` — matches `<h1>` in audit/page.tsx line 159
-- Section headings use `text-lg font-semibold text-gray-900` — matches filter card header in audit/page.tsx line 161
-- Table cell text: `text-sm` (14px), timestamps: `text-sm text-gray-500`
-- Margin% values in Sales tab: `text-sm font-medium` — same weight as action badge text
+- Page headings use `text-3xl font-semibold text-gray-900` — aligns with `<h1>` pattern; size (30px) provides sufficient visual hierarchy without needing bold (700)
+- Section headings use `text-lg font-semibold text-gray-900`
+- Table cell text: `text-sm` (14px) weight 400, timestamps: `text-sm text-gray-500` weight 400
+- Margin% values, Total column, Salesperson column: `text-sm font-semibold` (600) — emphasis via size + weight consistent with label role
 
 ---
 
@@ -131,7 +138,7 @@ Mirror `app/admin/layout.tsx` exactly:
 ```
 
 FinanceNav sidebar structure:
-- Header: "WebStockName" (text-xl font-bold text-gray-900) + "Finance" (text-sm text-gray-500)
+- Header: "WebStockName" (text-xl font-semibold text-gray-900) + "Finance" (text-sm text-gray-500)
 - Single nav item: Reports → `/finance/reports`, icon: `BarChart3`
 - Active state: `bg-blue-50 text-blue-700 border border-blue-200`
 - Inactive state: `text-gray-700 hover:bg-gray-50`
@@ -142,7 +149,7 @@ FinanceNav sidebar structure:
 ```
 <div className="p-8">
   <div className="flex justify-between items-center mb-6">
-    <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
+    <h1 className="text-3xl font-semibold text-gray-900">Reports</h1>
     {/* Date range Select — top right of header row */}
     <Select> {/* Today | Yesterday | This Week | This Month */} </Select>
   </div>
@@ -164,18 +171,20 @@ Table inside `bg-white rounded-lg border border-gray-200`:
 
 Columns: **Time | Product(s) | Salesperson | Total | Payment Method | Margin%**
 
-- Time: `text-sm text-gray-500`, format: `HH:mm` (24h, no date — date already implied by range)
-- Product(s): comma-separated product names if multiple SaleItems, `text-sm text-gray-900`
-- Salesperson: `text-sm font-medium text-gray-900`
-- Total: `text-sm font-medium text-gray-900`, formatted as currency (e.g., `Rp 150.000`)
-- Payment Method: `text-sm text-gray-600`, plain text (Cash / Card / Transfer)
-- Margin%: `text-sm font-medium`, color-coded per color contract above, format: `23.4%` (one decimal place — Claude's Discretion)
+- Time: `text-sm text-gray-500` weight 400, format: `HH:mm` (24h, no date — date already implied by range)
+- Product(s): comma-separated product names if multiple SaleItems, `text-sm text-gray-900` weight 400
+- Salesperson: `text-sm font-semibold text-gray-900`
+- Total: `text-sm font-semibold text-gray-900`, formatted as currency (e.g., `Rp 150.000`)
+- Payment Method: `text-sm text-gray-600` weight 400, plain text (Cash / Card / Transfer)
+- Margin%: `text-sm font-semibold`, color-coded per color contract above, format: `23.4%` (one decimal place — Claude's Discretion)
 
 Summary row at bottom of Sales tab (Claude's Discretion — include):
-- Sticky footer row inside table: bold "Total" label, summed Total column, average Margin%
+- Sticky footer row inside table: semibold "Total" label, summed Total column, average Margin%
 - Background: `bg-gray-50 border-t-2 border-gray-300`
 
 Pagination: 50 rows per page (matches audit page limit). Prev/Next buttons with page indicator.
+- Prev button: `<Button variant="outline" size="sm" aria-label="Previous page"><ChevronLeft /></Button>`
+- Next button: `<Button variant="outline" size="sm" aria-label="Next page"><ChevronRight /></Button>`
 
 ### By Staff Tab
 
@@ -184,7 +193,7 @@ Flat table, no drill-down:
 Columns: **Salesperson | # Sales | Total Revenue | Items Sold**
 
 - One row per salesperson for the selected date range
-- Total Revenue: currency formatted
+- Total Revenue: currency formatted, weight 600
 - No pagination needed (bounded by number of active cashiers)
 
 ### Incentives Tab
@@ -193,7 +202,7 @@ Two-section layout:
 
 **Top section — per-salesperson summary table:**
 Columns: **Salesperson | Total Incentives | # Entries**
-- Total Incentives: currency formatted
+- Total Incentives: currency formatted, weight 600
 - Background: `bg-white rounded-lg border border-gray-200 mb-6`
 
 **Superadmin CTA (conditional rendering):**
@@ -203,11 +212,13 @@ Columns: **Salesperson | Total Incentives | # Entries**
 **Bottom section — chronological detail list:**
 Columns: **Date | Salesperson | Amount | Note | Entered By**
 - Date: the period date (D-10), format: `DD MMM YYYY`
-- Amount: currency formatted
-- Note: `text-sm text-gray-600`, truncated at 80 chars with ellipsis if longer
-- Entered By: username of Superadmin who created it
+- Amount: currency formatted, weight 600
+- Note: `text-sm text-gray-600` weight 400, truncated at 80 chars with ellipsis if longer
+- Entered By: username of Superadmin who created it, weight 400
 
 Pagination: 25 rows per page for the detail list.
+- Prev button: `<Button variant="outline" size="sm" aria-label="Previous page"><ChevronLeft /></Button>`
+- Next button: `<Button variant="outline" size="sm" aria-label="Next page"><ChevronRight /></Button>`
 
 ### Reconciliation Tab
 
@@ -292,7 +303,7 @@ Triggered by "Add Incentive" button. Uses `components/ui/dialog.tsx`.
         {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
       </div>
       <DialogFooter className="mt-6">
-        <Button type="button" variant="outline" onClick={closeModal}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={closeModal}>Cancel Entry</Button>
         <Button type="submit" disabled={submitting}>
           {submitting ? 'Saving...' : 'Save Incentive'}
         </Button>
@@ -340,7 +351,7 @@ Empty state rendering: single `<TableRow>` with `<TableCell colSpan={N} classNam
 |---------|------|
 | Primary CTA (Incentives tab, Superadmin) | "Add Incentive" |
 | Modal submit button | "Save Incentive" |
-| Modal cancel button | "Cancel" |
+| Modal cancel button | "Cancel Entry" |
 | Modal submitting state | "Saving..." |
 | Reset filters button (Audit) | "Reset Filters" (existing, keep) |
 | Date range default label | "Today" |
