@@ -29,19 +29,43 @@ export async function GET(request: NextRequest) {
     })
 
     const userIds = staffStats.map((s) => s.salespersonId)
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, username: true },
-    })
+    const [users, saleItems] = await Promise.all([
+      prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, username: true },
+      }),
+      prisma.saleItem.findMany({
+        where: {
+          sale: {
+            salespersonId: { in: userIds },
+            ...(startStr && endStr ? { createdAt: { gte: new Date(startStr), lte: new Date(endStr) } } : {}),
+          },
+        },
+        select: { quantity: true, unitPrice: true, unitCost: true, sale: { select: { salespersonId: true } } },
+      }),
+    ])
+
+    // Compute profit per salesperson from SaleItem rows
+    const profitMap: Record<string, number> = {}
+    for (const item of saleItems) {
+      const sid = item.sale.salespersonId
+      const profit = (Number(item.unitPrice) - Number(item.unitCost)) * item.quantity
+      profitMap[sid] = (profitMap[sid] ?? 0) + profit
+    }
 
     const data = staffStats.map((s) => {
       const user = users.find((u) => u.id === s.salespersonId)
+      const totalRevenue = Number(s._sum.total ?? 0)
+      const totalProfit = profitMap[s.salespersonId] ?? 0
+      const averageMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : null
       return {
-        salespersonId: s.salespersonId,
-        salesperson: user?.username ?? 'Unknown',
+        staffId: s.salespersonId,
+        username: user?.username ?? 'Unknown',
         salesCount: s._count.id,
-        totalRevenue: Number(s._sum.total ?? 0),
+        totalRevenue,
         itemsSold: s._sum.itemCount ?? 0,
+        totalProfit,
+        averageMargin: averageMargin !== null ? Math.round(averageMargin * 100) / 100 : null,
       }
     })
 
