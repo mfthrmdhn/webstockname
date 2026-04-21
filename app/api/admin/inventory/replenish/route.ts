@@ -34,8 +34,13 @@ export async function POST(request: NextRequest) {
     const req = request as AuthenticatedRequest
 
     const result = await prisma.$transaction(async (tx) => {
-      // Step 1: Get current values (before snapshot for audit)
-      const product = await tx.product.findUnique({ where: { id: productId } })
+      // Step 1: Lock the row to serialize concurrent replenishments (WR-01)
+      const rows = await tx.$queryRaw<Array<{ id: string; name: string; sku: string; store_qty: number; warehouse_qty: number; selling_price: string; cost: string; category: string | null; updated_by: string | null; created_at: Date }>>`
+        SELECT * FROM products WHERE id = ${productId} FOR UPDATE
+      `
+      const product = rows[0]
+        ? { ...rows[0], storeQty: rows[0].store_qty, warehouseQty: rows[0].warehouse_qty, sellingPrice: rows[0].selling_price, createdAt: rows[0].created_at, updatedBy: rows[0].updated_by }
+        : null
       if (!product) throw new Error('PRODUCT_NOT_FOUND')
 
       // Step 2: Validate warehouse stock
