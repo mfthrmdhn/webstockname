@@ -60,8 +60,8 @@ export default function AuditPage() {
   const [users, setUsers] = useState<{ id: string; username: string }[]>([])
 
   // Filter states
-  const [action, setAction] = useState('')
-  const [userId, setUserId] = useState('')
+  const [action, setAction] = useState('all')
+  const [userId, setUserId] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(1)
@@ -109,8 +109,8 @@ export default function AuditPage() {
         params.append('page', page.toString())
         params.append('limit', '50')
 
-        if (action) params.append('action', action)
-        if (userId) params.append('user_id', userId)
+        if (action && action !== 'all') params.append('action', action)
+        if (userId && userId !== 'all') params.append('user_id', userId)
         if (startDate) params.append('start_date', startDate)
         if (endDate) params.append('end_date', endDate)
 
@@ -139,8 +139,8 @@ export default function AuditPage() {
   }, [action, userId, startDate, endDate, page, addToast])
 
   const handleReset = () => {
-    setAction('')
-    setUserId('')
+    setAction('all')
+    setUserId('all')
     setStartDate('')
     setEndDate('')
     setPage(1)
@@ -173,7 +173,7 @@ export default function AuditPage() {
                 <SelectValue placeholder="All actions" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All actions</SelectItem>
+                <SelectItem value="all">All actions</SelectItem>
                 {ACTIONS.map((act) => (
                   <SelectItem key={act} value={act}>
                     {act}
@@ -190,7 +190,7 @@ export default function AuditPage() {
                 <SelectValue placeholder="All users" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All users</SelectItem>
+                <SelectItem value="all">All users</SelectItem>
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.username}

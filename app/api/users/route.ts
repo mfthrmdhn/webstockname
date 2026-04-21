@@ -156,9 +156,6 @@ export async function GET(request: NextRequest) {
     // Fetch users with optional filters
     const users = await prisma.user.findMany({
       where,
-      include: {
-        role: true
-      },
       select: {
         id: true,
         username: true,
