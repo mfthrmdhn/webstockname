@@ -79,7 +79,13 @@ Plans:
 5. Finance can view all incentives owed to each staff member by date range
 6. Superadmin can view comprehensive audit trail filtered by date, user, or operation type; audit records are immutable
 
-**Plans:** TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Incentive schema migration + test stubs
+- [ ] 03-02-PLAN.md — Report & incentive API routes
+- [ ] 03-03-PLAN.md — Finance layout, nav, reports page, login redirect
+- [ ] 03-04-PLAN.md — Audit page extension (Details column + new action types)
 
 **UI hint**: yes
 
