@@ -31,6 +31,7 @@ interface AuditLog {
   entityId: string
   createdAt: string
   timestamp: number
+  metadata?: Record<string, unknown> | null
 }
 
 interface PaginationInfo {
@@ -41,12 +42,15 @@ interface PaginationInfo {
 }
 
 const ACTIONS = [
+  'LOGIN',
+  'LOGOUT',
   'USER_CREATE',
   'USER_EDIT',
   'USER_DEACTIVATE',
   'PRODUCT_CREATE',
-  'LOGIN',
-  'LOGOUT',
+  'SALE_CREATE',           // Phase 2 backfill
+  'INVENTORY_REPLENISH',   // Phase 2 backfill
+  'INCENTIVE_CREATE',      // Phase 3
 ]
 
 export default function AuditPage() {
@@ -248,12 +252,13 @@ export default function AuditPage() {
                   <TableHead>Entity Type</TableHead>
                   <TableHead>Entity ID</TableHead>
                   <TableHead>Timestamp</TableHead>
+                  <TableHead>Details</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {logs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                       No audit logs found
                     </TableCell>
                   </TableRow>
@@ -274,6 +279,12 @@ export default function AuditPage() {
                       </TableCell>
                       <TableCell className="text-sm text-gray-500">
                         {formatDate(log.createdAt)}
+                      </TableCell>
+                      <TableCell
+                        className="text-sm text-gray-500 font-mono max-w-xs truncate"
+                        title={log.metadata ? JSON.stringify(log.metadata) : ''}
+                      >
+                        {log.metadata ? JSON.stringify(log.metadata).slice(0, 60) : '—'}
                       </TableCell>
                     </TableRow>
                   ))
