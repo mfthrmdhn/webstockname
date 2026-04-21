@@ -100,7 +100,8 @@ export async function GET(request: NextRequest) {
       entityType: log.entityType,
       entityId: log.entityId,
       createdAt: log.createdAt.toISOString(),
-      timestamp: log.createdAt.getTime()
+      timestamp: log.createdAt.getTime(),
+      metadata: log.metadata
     }))
 
     return NextResponse.json(
