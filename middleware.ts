@@ -43,9 +43,24 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (pathname.startsWith('/finance')) {
+    const token = request.cookies.get('access_token')?.value
+    if (!token) return NextResponse.redirect(new URL('/login', request.url))
+
+    try {
+      const payload = verifyAccessToken(token)
+      if (!['FINANCE', 'SUPERADMIN'].includes(payload.role)) {
+        return NextResponse.redirect(new URL('/login', request.url))
+      }
+      return NextResponse.next()
+    } catch {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+  }
+
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/cashier/:path*'],
+  matcher: ['/admin/:path*', '/cashier/:path*', '/finance/:path*'],
 }
