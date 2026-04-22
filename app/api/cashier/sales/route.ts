@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authMiddleware, AuthenticatedRequest } from '@/middleware/auth'
 import { rbacMiddleware } from '@/middleware/rbac'
-import { logAction } from '@/lib/audit/logger'
 import { z } from 'zod'
 
 const cartItemSchema = z.object({
@@ -117,16 +116,25 @@ export async function POST(request: NextRequest) {
         `
       }
 
-      return newSale
-    })
+      // Step 7: Create audit log atomically within transaction (AUDIT-02, SALE-08)
+      // If this fails, entire transaction rolls back — no sale without audit trail
+      await tx.auditLog.create({
+        data: {
+          userId: cashierId,
+          action: 'SALE_CREATE',
+          entityType: 'SALE',
+          entityId: newSale.id,
+          metadata: {
+            cashierId,
+            salespersonId,
+            total: Number(newSale.total),
+            paymentMethod,
+            itemCount: newSale.itemCount,
+          },
+        },
+      })
 
-    // Audit log (T-02-08)
-    await logAction(cashierId, 'SALE_CREATE', 'SALE', sale.id, {
-      cashierId,
-      salespersonId,
-      total: Number(sale.total),
-      paymentMethod,
-      itemCount: sale.itemCount,
+      return newSale
     })
 
     const changeDue =
