@@ -1,15 +1,14 @@
 ---
 phase: 02-operations
-verified: 2026-04-21T12:00:00Z
+verified: 2026-04-22T08:00:00Z
 status: human_needed
-score: 14/14 must-haves verified
+score: 16/16 must-haves verified
 re_verification:
-  previous_status: gaps_found
-  previous_score: 11/14
+  previous_status: human_needed
+  previous_score: 14/14
   gaps_closed:
-    - "GET /api/cashier/products?search=... returns products with storeQty, warehouseQty, sellingPrice"
-    - "GET /api/cashier/staff returns only active CASHIER-role users"
-    - "POST /api/cashier/sales creates Sale + SaleItems + decrements store_qty in a single Prisma transaction"
+    - "Admin inventory page loads data instead of spinning indefinitely when token is absent"
+    - "Cashier has a visible logout button accessible from the POS screen"
   gaps_remaining: []
   regressions: []
 human_verification:
@@ -22,47 +21,45 @@ human_verification:
   - test: "Log in as SUPERADMIN, open /admin/inventory, click Add Stock on a product row, fill quantity and reason, submit."
     expected: "Quantities update inline without page reload; toast shows success message."
     why_human: "End-to-end dialog flow and optimistic update require visual confirmation."
+  - test: "Navigate to /admin/inventory without a valid token (e.g., clear localStorage). Observe page state."
+    expected: "Page exits loading state immediately — no indefinite spinner. Shows empty state or redirects."
+    why_human: "Browser localStorage state and resulting UI behavior require live browser interaction."
+  - test: "Log in as CASHIER and navigate to /cashier/pos. Verify the CashierNav sidebar is visible with a Logout button."
+    expected: "Sidebar renders with WebStockName title, Cashier subtitle, and a full-width Logout button at the bottom. Clicking Logout redirects to /login."
+    why_human: "Visual sidebar rendering and redirect behavior require browser interaction."
 ---
 
 # Phase 2: Operations Verification Report
 
 **Phase Goal:** Cashiers can process sales with real-time inventory visibility, and inventory decreases atomically with sale completion without data loss or race conditions.
-**Verified:** 2026-04-21T12:00:00Z
+**Verified:** 2026-04-22T08:00:00Z
 **Status:** human_needed
-**Re-verification:** Yes — after cherry-pick of previously orphaned commits (all 3 cashier API files now on HEAD)
+**Re-verification:** Yes — Plan 02-06 added CashierNav and fixed inventory loading bug; all prior gaps remain closed; 2 new must-haves verified.
 
 ## Goal Achievement
 
 ### Observable Truths
 
-| # | Truth | Status | Evidence |
-|---|-------|--------|----------|
-| 1 | prisma/schema.prisma has Sale, SaleItem, extended Product with pricing/qty fields | ✓ VERIFIED | model Sale, model SaleItem, sellingPrice, storeQty, metadata Json? all present (confirmed in prior verifications) |
-| 2 | AuditLog model has metadata Json? field | ✓ VERIFIED | grep confirmed in schema.prisma |
-| 3 | logAction accepts 5th optional metadata parameter and persists it | ✓ VERIFIED | lib/audit/logger.ts correct signature; metadata stored in create |
-| 4 | All 7 test scaffold files exist | ✓ VERIFIED | All 7 files in __tests__/unit/, __tests__/endpoints/, __tests__/integration/ |
-| 5 | package.json has test:integration script | ✓ VERIFIED | Present; consistent with other test infrastructure |
-| 6 | GET /api/cashier/products?search=... returns products with storeQty, warehouseQty, sellingPrice | ✓ VERIFIED | app/api/cashier/products/route.ts EXISTS; real prisma.product.findMany with OR search on name/sku; selects storeQty, warehouseQty, sellingPrice, cost; RBAC enforces CASHIER|SUPERADMIN |
-| 7 | GET /api/cashier/staff returns only active CASHIER-role users | ✓ VERIFIED | app/api/cashier/staff/route.ts EXISTS; filters isActive:true and role.name:'CASHIER'; selects id, username only |
-| 8 | POST /api/cashier/sales creates Sale + SaleItems + decrements store_qty in single transaction | ✓ VERIFIED | app/api/cashier/sales/route.ts EXISTS; prisma.$transaction wraps SELECT FOR UPDATE, tx.sale.create, tx.saleItem.createMany, tx.$executeRaw decrement |
-| 9 | POST /api/cashier/sales rejects insufficient stock with 'Only X in stock for Y' | ✓ VERIFIED | Line 74-77: throws `Only ${product.store_qty} in stock for "${product.name}"` when store_qty < requested; caught and returned as 400 |
-| 10 | POST /api/cashier/sales price snapshot from locked DB row only | ✓ VERIFIED | Comment at line 51: "price comes from DB, NEVER from request body (T-02-04)"; total and unitPrice computed from SELECT FOR UPDATE result, not from request items |
-| 11 | FINANCE role receives 403 on all cashier routes | ✓ VERIFIED | rbacMiddleware(['CASHIER', 'SUPERADMIN']) applied on all three cashier routes; FINANCE not in allowlist returns 403 |
-| 12 | GET /api/admin/inventory returns all products with storeQty and warehouseQty (SUPERADMIN only) | ✓ VERIFIED | app/api/admin/inventory/route.ts; rbacMiddleware(['SUPERADMIN']); real Prisma query returning sellingPrice, cost, storeQty, warehouseQty |
+| #  | Truth | Status | Evidence |
+|----|-------|--------|----------|
+| 1  | prisma/schema.prisma has Sale, SaleItem, extended Product with pricing/qty fields | ✓ VERIFIED | model Sale, model SaleItem, sellingPrice, storeQty, metadata Json? all present |
+| 2  | AuditLog model has metadata Json? field | ✓ VERIFIED | Confirmed in schema.prisma |
+| 3  | logAction accepts 5th optional metadata parameter and persists it | ✓ VERIFIED | lib/audit/logger.ts correct signature; metadata stored in create |
+| 4  | All 7 test scaffold files exist | ✓ VERIFIED | All 7 files in __tests__/unit/, __tests__/endpoints/, __tests__/integration/ |
+| 5  | package.json has test:integration script | ✓ VERIFIED | Present |
+| 6  | GET /api/cashier/products?search=... returns products with storeQty, warehouseQty, sellingPrice | ✓ VERIFIED | app/api/cashier/products/route.ts — real prisma.product.findMany with OR search on name/sku; RBAC CASHIER|SUPERADMIN |
+| 7  | GET /api/cashier/staff returns only active CASHIER-role users | ✓ VERIFIED | app/api/cashier/staff/route.ts — filters isActive:true and role.name:'CASHIER' |
+| 8  | POST /api/cashier/sales creates Sale + SaleItems + decrements store_qty in single transaction | ✓ VERIFIED | app/api/cashier/sales/route.ts — prisma.$transaction wraps SELECT FOR UPDATE, tx.sale.create, tx.saleItem.createMany, tx.$executeRaw decrement |
+| 9  | POST /api/cashier/sales rejects insufficient stock with 'Only X in stock for Y' | ✓ VERIFIED | Line 74-77: throws when store_qty < requested; caught and returned as 400 |
+| 10 | POST /api/cashier/sales price snapshot from locked DB row only | ✓ VERIFIED | Comment at line 51: price comes from DB, never from request body |
+| 11 | FINANCE role receives 403 on all cashier routes | ✓ VERIFIED | rbacMiddleware(['CASHIER', 'SUPERADMIN']) applied on all three cashier routes |
+| 12 | GET /api/admin/inventory returns all products with storeQty and warehouseQty (SUPERADMIN only) | ✓ VERIFIED | app/api/admin/inventory/route.ts; rbacMiddleware(['SUPERADMIN']); real Prisma query |
 | 13 | POST /api/admin/inventory/replenish increments store_qty and decrements warehouse_qty atomically | ✓ VERIFIED | app/api/admin/inventory/replenish/route.ts uses prisma.$transaction with UPDATE + validates warehouse stock |
-| 14 | Replenishment rejected if warehouse_qty < requested quantity | ✓ VERIFIED | throws 'Insufficient warehouse stock. Only X available.' when product.warehouseQty < quantity |
-| 15 | Replenishment audit entry includes before/after quantities in metadata | ✓ VERIFIED | logAction called with before/after storeQty and warehouseQty in metadata object |
-| 16 | middleware.ts protects /cashier/* routes for CASHIER and SUPERADMIN roles | ✓ VERIFIED | matcher: ['/admin/:path*', '/cashier/:path*']; pathname.startsWith('/cashier') branch checks ['CASHIER', 'SUPERADMIN'] |
-| 17 | Cashier sees two-panel POS layout: product search left, cart right | ✓ VERIFIED | app/cashier/pos/page.tsx with grid cols, search panel, cart panel |
-| 18 | Typing in search field debounces 300ms then calls /api/cashier/products | ✓ VERIFIED | setTimeout(..., 300) and fetch to api/cashier/products in POS page |
-| 19 | Cart shows item name, quantity (+/- buttons), unit price, line subtotal | ✓ VERIFIED | updateQty, Minus/Plus icons, item.unitPrice * item.quantity in POS page |
-| 20 | Salesperson picker shows CASHIER-role users from /api/cashier/staff | ✓ VERIFIED | api/cashier/staff fetch on mount; Select populated from staff state |
-| 21 | Successful checkout shows confirmation screen with sale total, items, salesperson, payment | ✓ VERIFIED | confirmedSale state branch renders receipt; startNewSale clears cart |
-| 22 | Admin navigation shows Inventory link routing to /admin/inventory | ✓ VERIFIED | AdminNav.tsx has /admin/inventory entry |
-| 23 | Inventory page shows table with storeQty/warehouseQty and Add Stock button | ✓ VERIFIED | app/admin/inventory/page.tsx with storeQty/warehouseQty columns and Add Stock button |
-| 24 | Product create form includes sellingPrice and cost fields | ✓ VERIFIED | newProductSellingPrice, newProductCost state + form inputs + Zod schema + Prisma create |
+| 14 | Replenishment rejected if warehouse_qty < requested quantity | ✓ VERIFIED | throws 'Insufficient warehouse stock. Only X available.' |
+| 15 | Admin inventory page calls setLoading(false) on early return when token is absent | ✓ VERIFIED | app/admin/inventory/page.tsx line 47-49: if (!token) { setLoading(false); return } — two occurrences of setLoading(false) confirmed: early-return path (line 48) and finally block (line 61) |
+| 16 | Cashier layout renders CashierNav with a logout button | ✓ VERIFIED | components/CashierNav.tsx exports CashierNav with LogOut icon, handleLogout via logout() + router.push('/login'); app/cashier/layout.tsx imports and renders <CashierNav /> at line 13; inline logout removed from pos/page.tsx |
 
-**Score:** 14/14 truths verified (all gaps from prior verification now closed)
+**Score:** 16/16 truths verified
 
 ### Required Artifacts
 
@@ -70,53 +67,44 @@ human_verification:
 |----------|----------|--------|---------|
 | `prisma/schema.prisma` | Sale/SaleItem/Product pricing/AuditLog.metadata | ✓ VERIFIED | All models present |
 | `lib/audit/logger.ts` | logAction with metadata param | ✓ VERIFIED | Correct signature and implementation |
-| `__tests__/unit/sales.test.ts` | Sales contract tests | ✓ VERIFIED | File exists |
-| `__tests__/unit/inventory.test.ts` | Inventory contract tests | ✓ VERIFIED | File exists |
-| `__tests__/unit/audit.test.ts` | Audit contract tests | ✓ VERIFIED | File exists |
-| `__tests__/endpoints/sales.test.ts` | Sales endpoint stubs | ✓ VERIFIED | File exists |
-| `__tests__/endpoints/inventory.test.ts` | Inventory endpoint stubs | ✓ VERIFIED | File exists |
-| `__tests__/endpoints/cashier-staff.test.ts` | Staff endpoint stubs | ✓ VERIFIED | File exists |
-| `__tests__/integration/concurrent-sale.test.ts` | Race condition scaffold | ✓ VERIFIED | File exists |
-| `app/api/cashier/products/route.ts` | Product search endpoint | ✓ VERIFIED | EXISTS on HEAD; real Prisma query with name/sku OR search; RBAC CASHIER|SUPERADMIN |
-| `app/api/cashier/staff/route.ts` | CASHIER staff list | ✓ VERIFIED | EXISTS on HEAD; filters isActive+role.name:'CASHIER' |
-| `app/api/cashier/sales/route.ts` | Atomic checkout endpoint | ✓ VERIFIED | EXISTS on HEAD; full prisma.$transaction with SELECT FOR UPDATE, stock validation, price snapshot, SaleItem creation, store_qty decrement, audit log |
-| `app/api/admin/inventory/route.ts` | Inventory list (SUPERADMIN) | ✓ VERIFIED | EXISTS; RBAC + real Prisma query |
-| `app/api/admin/inventory/replenish/route.ts` | Atomic replenishment | ✓ VERIFIED | EXISTS; prisma.$transaction, warehouse validation, audit log |
+| `app/api/cashier/products/route.ts` | Product search endpoint | ✓ VERIFIED | Real Prisma query with name/sku OR search; RBAC CASHIER|SUPERADMIN |
+| `app/api/cashier/staff/route.ts` | CASHIER staff list | ✓ VERIFIED | Filters isActive + role.name:'CASHIER' |
+| `app/api/cashier/sales/route.ts` | Atomic checkout endpoint | ✓ VERIFIED | Full prisma.$transaction with SELECT FOR UPDATE, stock validation, price snapshot, SaleItem creation, store_qty decrement, audit log |
+| `app/api/admin/inventory/route.ts` | Inventory list (SUPERADMIN) | ✓ VERIFIED | RBAC + real Prisma query |
+| `app/api/admin/inventory/replenish/route.ts` | Atomic replenishment | ✓ VERIFIED | prisma.$transaction, warehouse validation, audit log |
 | `middleware.ts` | /cashier/* route protection | ✓ VERIFIED | matcher includes /cashier/:path*; role check ['CASHIER', 'SUPERADMIN'] |
-| `app/cashier/layout.tsx` | Cashier layout with ToastProvider | ✓ VERIFIED | File exists with ToastProvider |
-| `app/cashier/pos/page.tsx` | Full POS UI | ✓ VERIFIED | Substantive implementation with all required features |
-| `app/admin/inventory/page.tsx` | Inventory management page | ✓ VERIFIED | Table, replenishment dialog, optimistic update |
+| `app/cashier/layout.tsx` | Cashier layout with CashierNav | ✓ VERIFIED | Imports and renders CashierNav; ToastProvider wraps layout |
+| `app/cashier/pos/page.tsx` | Full POS UI (inline logout removed) | ✓ VERIFIED | Substantive implementation; no window.location.href or await logout inline code |
+| `components/CashierNav.tsx` | CashierNav with logout button | ✓ VERIFIED | Exists; LogOut icon; handleLogout calls logout() + router.push('/login') |
+| `app/admin/inventory/page.tsx` | Fixed loading bug; replenishment dialog | ✓ VERIFIED | setLoading(false) on early return; table, replenishment dialog, optimistic update all present |
 | `components/AdminNav.tsx` | Nav with Inventory link | ✓ VERIFIED | /admin/inventory entry present |
 | `app/admin/products/page.tsx` | Product form with pricing | ✓ VERIFIED | sellingPrice and cost fields added |
-| `app/api/products/route.ts` | POST schema with pricing | ✓ VERIFIED | Zod schema and Prisma create include sellingPrice/cost |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| app/api/cashier/sales/route.ts | prisma.$transaction | SELECT FOR UPDATE raw SQL | ✓ WIRED | tx.$queryRaw with FOR UPDATE; tx.sale.create; tx.saleItem.createMany; tx.$executeRaw decrement — all inside single transaction closure |
-| app/api/cashier/sales/route.ts | lib/audit/logger.ts | logAction('SALE_CREATE') | ✓ WIRED | import logAction at top; called after transaction with cashierId, 'SALE_CREATE', 'SALE', sale.id, metadata |
-| app/api/admin/inventory/replenish/route.ts | lib/audit/logger.ts | logAction('INVENTORY_REPLENISH') | ✓ WIRED | logAction called with before/after metadata; confirmed in file |
-| app/api/admin/inventory/replenish/route.ts | prisma.$transaction | atomic store/warehouse update | ✓ WIRED | prisma.$transaction wraps findUnique + update |
-| middleware.ts | /cashier route protection | startsWith('/cashier') branch | ✓ WIRED | branch exists; role check ['CASHIER', 'SUPERADMIN'] |
-| app/cashier/pos/page.tsx | /api/cashier/products | debounced fetch in useEffect | ✓ WIRED | fetch call + state update present; endpoint now exists |
-| app/cashier/pos/page.tsx | /api/cashier/sales | handleCheckout POST | ✓ WIRED | POST fetch with body in handleCheckout; endpoint now exists |
+| app/cashier/layout.tsx | components/CashierNav.tsx | import and render <CashierNav /> | ✓ WIRED | Line 3 import; line 13 renders <CashierNav /> |
+| components/CashierNav.tsx | lib/auth/client | logout() call in handleLogout | ✓ WIRED | import logout from '@/lib/auth/client'; called in handleLogout |
+| app/api/cashier/sales/route.ts | prisma.$transaction | SELECT FOR UPDATE raw SQL | ✓ WIRED | tx.$queryRaw with FOR UPDATE; tx.sale.create; tx.saleItem.createMany; tx.$executeRaw decrement |
+| app/api/cashier/sales/route.ts | lib/audit/logger.ts | logAction('SALE_CREATE') | ✓ WIRED | import logAction at top; called after transaction |
+| app/api/admin/inventory/replenish/route.ts | lib/audit/logger.ts | logAction('INVENTORY_REPLENISH') | ✓ WIRED | logAction called with before/after metadata |
 | app/admin/inventory/page.tsx | /api/admin/inventory | fetch on mount | ✓ WIRED | fetchInventory useCallback + useEffect |
-| app/admin/inventory/page.tsx | /api/admin/inventory/replenish | POST in handleReplenish | ✓ WIRED | POST call present; endpoint exists |
+| app/admin/inventory/page.tsx | /api/admin/inventory/replenish | POST in handleReplenish | ✓ WIRED | POST call present |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|--------------------|--------|
-| app/cashier/pos/page.tsx | searchResults | /api/cashier/products → prisma.product.findMany | Route exists; real Prisma query with OR search | ✓ FLOWING |
-| app/cashier/pos/page.tsx | staff | /api/cashier/staff → prisma.user.findMany | Route exists; real Prisma query filtered by isActive+role | ✓ FLOWING |
-| app/admin/inventory/page.tsx | products | /api/admin/inventory → prisma.product.findMany | Route exists; Prisma findMany with real fields | ✓ FLOWING |
+| app/cashier/pos/page.tsx | searchResults | /api/cashier/products → prisma.product.findMany | Real Prisma query with OR search | ✓ FLOWING |
+| app/cashier/pos/page.tsx | staff | /api/cashier/staff → prisma.user.findMany | Real Prisma query filtered by isActive+role | ✓ FLOWING |
+| app/admin/inventory/page.tsx | products | /api/admin/inventory → prisma.product.findMany | Prisma findMany with real fields | ✓ FLOWING |
 | app/api/cashier/sales/route.ts | Sale + store_qty | prisma.$transaction with SELECT FOR UPDATE | Real DB read-lock, decrement, Sale create, SaleItem create | ✓ FLOWING |
 | app/api/admin/inventory/replenish/route.ts | storeQty/warehouseQty | prisma.$transaction | Real DB update, before/after values returned | ✓ FLOWING |
 
 ### Behavioral Spot-Checks
 
-Step 7b: SKIPPED — all key behaviors require a live database connection. File existence and wiring are verified programmatically; runtime behavior routes to human verification below.
+Step 7b: SKIPPED — all key behaviors require a live database connection and browser interaction. File existence and wiring verified programmatically; runtime behavior routes to human verification below.
 
 ### Requirements Coverage
 
@@ -145,7 +133,7 @@ Step 7b: SKIPPED — all key behaviors require a live database connection. File 
 
 | File | Pattern | Severity | Impact |
 |------|---------|----------|--------|
-| None | No blocker anti-patterns detected | — | All three previously-missing cashier API routes are now substantive implementations; no TODO/placeholder patterns found |
+| None | No blocker anti-patterns detected | — | All must-have artifacts are substantive implementations; no TODO/placeholder patterns found |
 
 ### Human Verification Required
 
@@ -167,20 +155,30 @@ Step 7b: SKIPPED — all key behaviors require a live database connection. File 
 **Expected:** Quantities update inline without page reload; toast shows success message.
 **Why human:** End-to-end dialog flow and optimistic update require visual confirmation.
 
+#### 4. Inventory Page — No Spinner on Missing Token
+
+**Test:** Navigate to /admin/inventory without a valid token (clear localStorage first). Observe page state.
+**Expected:** Page exits loading state immediately — no indefinite spinner. Shows empty state or redirects to login.
+**Why human:** Browser localStorage state and resulting UI behavior require live browser interaction.
+
+#### 5. CashierNav Sidebar Visible on POS Page
+
+**Test:** Log in as CASHIER and navigate to /cashier/pos. Verify the CashierNav sidebar is visible with a Logout button.
+**Expected:** Sidebar renders with WebStockName title, Cashier subtitle, and a full-width Logout button at the bottom. Clicking Logout redirects to /login and clears the session.
+**Why human:** Visual sidebar rendering and redirect behavior require browser interaction.
+
 ### Gaps Summary
 
-No programmatic gaps remain. All 14 must-have truths are verified:
+No programmatic gaps remain. All 16 must-have truths are verified:
 
-- Wave 1 (Plan 02-01): Fully verified — schema, audit logger, test scaffolds all present
-- Wave 2 (Plan 02-02): NOW FULLY CLOSED — all three cashier API routes recovered via git cherry-pick and verified as substantive implementations
-- Wave 2 (Plan 02-03): Fully verified — admin inventory routes and cashier middleware confirmed
-- Wave 3 (Plans 02-04, 02-05): Fully verified — POS UI and inventory management UI confirmed; data now flows end-to-end
+- Plans 02-01 through 02-05: Fully verified in prior verification pass (14/14 truths)
+- Plan 02-06 (new): 2 additional must-haves added and verified:
+  - `app/admin/inventory/page.tsx`: setLoading(false) called on token-absent early return (line 48), preventing indefinite spinner
+  - `components/CashierNav.tsx` created with logout button; `app/cashier/layout.tsx` renders it; inline logout removed from pos/page.tsx
 
-The atomic checkout route (app/api/cashier/sales/route.ts) correctly implements SELECT FOR UPDATE inside prisma.$transaction, ensuring race-condition safety. Price snapshots are locked from the DB row, not the request body. Stock validation occurs inside the transaction after the row lock is acquired.
-
-Three items require human browser-level confirmation before the phase can be declared fully passed.
+Five items require human browser-level confirmation before the phase can be declared fully passed.
 
 ---
 
-_Verified: 2026-04-21T12:00:00Z_
+_Verified: 2026-04-22T08:00:00Z_
 _Verifier: Claude (gsd-verifier)_
