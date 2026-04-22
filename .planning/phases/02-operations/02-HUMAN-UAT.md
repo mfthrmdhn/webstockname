@@ -20,24 +20,38 @@ severity: major
 
 ### 2. FINANCE Role Blocked from /cashier/*
 expected: Log in as FINANCE user, navigate directly to /cashier/pos — should redirect to /login.
-result: pass
-
-### 3. Inventory Replenishment Flow
-expected: Log in as SUPERADMIN, open /admin/inventory, click Add Stock — quantities update inline, toast shows success.
 result: issue
-reported: "no add stock button, no table shown, show error Loading inventory..."
+reported: "Can't login at all — login is broken"
+severity: critical
+
+### 3. Product Stock Input Missing
+expected: When adding a product, form includes fields for store quantity and warehouse quantity.
+result: issue
+reported: "Can add product but cannot input store or warehouse stock quantity"
 severity: major
 
 ## Summary
 
 total: 3
-passed: 1
-issues: 2
+passed: 0
+issues: 3
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
+
+- truth: "Login works for all roles"
+  status: failed
+  reason: "User reported: can't login at all"
+  severity: critical
+  test: 2
+
+- truth: "Product form includes store and warehouse quantity fields"
+  status: failed
+  reason: "User reported: can add product but cannot input store or warehouse stock quantity"
+  severity: major
+  test: 3
 
 - truth: "CASHIER POS page has a logout button to end the session"
   status: resolved
