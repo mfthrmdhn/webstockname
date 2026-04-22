@@ -157,6 +157,16 @@ This roadmap directly addresses critical pitfalls identified in research:
 **Stack:** PostgreSQL for transactional data + audit logs, REST API, role-based middleware  
 **Scaling:** Designed for 0-100 daily transactions (single store); indices and caching added in Phase 3+ if needed
 
+### Phase 4: Product management CRUD operations: implement edit and delete endpoints and UI controls for product lifecycle management in admin interface. Includes PUT/PATCH endpoint, DELETE endpoint, edit modal, confirmation dialogs, and audit logging for PRODUCT_UPDATE and PRODUCT_DELETE events.
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 3
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 4 to break down)
+
 ---
 
 *Roadmap created: 2026-04-14*
