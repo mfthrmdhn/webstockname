@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
         name: true,
         sku: true,
         sellingPrice: true,
-        cost: true,
         storeQty: true,
         warehouseQty: true,
       },

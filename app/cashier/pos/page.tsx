@@ -20,7 +20,6 @@ interface Product {
   name: string
   sku: string
   sellingPrice: number
-  cost: number
   storeQty: number
   warehouseQty: number
 }
