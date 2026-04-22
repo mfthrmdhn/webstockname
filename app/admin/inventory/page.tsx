@@ -44,7 +44,10 @@ export default function InventoryPage() {
 
   const fetchInventory = useCallback(async () => {
     const token = localStorage.getItem('accessToken')
-    if (!token) return
+    if (!token) {
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
       const res = await fetch('/api/admin/inventory', {
