@@ -35,7 +35,7 @@ import { z } from 'zod'
 interface User {
   id: string
   username: string
-  role: string
+  role: { name: string }
   isActive: boolean
   createdAt: string
 }
@@ -258,7 +258,7 @@ export default function UsersPage() {
 
   const openEditDialog = (user: User) => {
     setSelectedUser(user)
-    setEditForm({ username: user.username, role: user.role })
+    setEditForm({ username: user.username, role: user.role.name })
     setEditOpen(true)
   }
 
@@ -388,7 +388,7 @@ export default function UsersPage() {
                   <TableCell className="font-medium">{user.username}</TableCell>
                   <TableCell>
                     <span className="inline-block px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
-                      {user.role}
+                      {user.role.name}
                     </span>
                   </TableCell>
                   <TableCell>
