@@ -51,14 +51,20 @@
 5. Superadmin can manually replenish inventory from warehouse to store; replenishment is logged with timestamp and user
 6. Every inventory change (sale, replenishment) is recorded in audit trail with before/after quantities and who made the change
 
-**Plans:** 5 plans
+**Plans:** 8 plans (5 initial + 3 gap closure)
 
 Plans:
-- [ ] 02-01-PLAN.md — Schema migration (Sale/SaleItem/pricing fields) + logAction extension + test scaffolds
-- [ ] 02-02-PLAN.md — Cashier API routes: product search, staff picker, atomic checkout
-- [ ] 02-03-PLAN.md — Admin inventory API routes + middleware /cashier/* protection
-- [ ] 02-04-PLAN.md — POS UI: two-panel layout, cart, checkout, confirmation screen
-- [ ] 02-05-PLAN.md — Admin inventory UI + AdminNav link + product form pricing fields
+- [x] 02-01-PLAN.md — Schema migration (Sale/SaleItem/pricing fields) + logAction extension + test scaffolds
+- [x] 02-02-PLAN.md — Cashier API routes: product search, staff picker, atomic checkout
+- [x] 02-03-PLAN.md — Admin inventory API routes + middleware /cashier/* protection
+- [x] 02-04-PLAN.md — POS UI: two-panel layout, cart, checkout, confirmation screen
+- [x] 02-05-PLAN.md — Admin inventory UI + AdminNav link + product form pricing fields
+- [x] 02-06-PLAN.md — Admin inventory page loading fix + CashierNav with logout
+- [x] 02-07-PLAN.md — Login system investigation and fix (gap closure)
+- [x] 02-08-PLAN.md — Product form: add store_qty and warehouse_qty fields (gap closure)
+- [ ] 02-09-PLAN.md — Move audit log inside transaction for atomic SALE_CREATE (gap closure: CR-01)
+- [ ] 02-10-PLAN.md — Remove cost field from cashier products API (gap closure: CR-02)
+- [ ] 02-11-PLAN.md — Fail closed on missing JWT_SECRET (gap closure: CR-03)
 
 **UI hint**: yes
 
@@ -95,9 +101,9 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 3/9 | In progress | 01-01, 01-02, 01-03 |
-| 2. Operations | 0/5 | Not started | - |
-| 3. Intelligence | 0/TBD | Not started | - |
+| 1. Foundation | 9/9 | COMPLETE | 01-01 through 01-09 |
+| 2. Operations | 8/11 | In progress | 02-01 through 02-08, gap closure pending (02-09, 02-10, 02-11) |
+| 3. Intelligence | 0/4 | Not started | - |
 
 ---
 
@@ -154,3 +160,4 @@ This roadmap directly addresses critical pitfalls identified in research:
 ---
 
 *Roadmap created: 2026-04-14*
+*Gap closure plans added: 2026-04-22*
