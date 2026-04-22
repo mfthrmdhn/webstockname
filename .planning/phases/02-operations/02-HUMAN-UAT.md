@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: partial
 phase: 02-operations
 source: [02-VERIFICATION.md]
 started: 2026-04-21T00:00:00Z
-updated: 2026-04-21T00:00:00Z
+updated: 2026-04-22T08:00:00Z
 ---
 
 ## Current Test
@@ -40,7 +40,7 @@ blocked: 0
 ## Gaps
 
 - truth: "CASHIER POS page has a logout button to end the session"
-  status: failed
+  status: resolved
   reason: "User reported: cashier able to login but no logout button"
   severity: major
   test: 1
@@ -56,7 +56,7 @@ blocked: 0
   debug_session: ""
 
 - truth: "SUPERADMIN can view inventory table and add stock at /admin/inventory"
-  status: failed
+  status: resolved
   reason: "User reported: no add stock button, no table shown, show error Loading inventory..."
   severity: major
   test: 3
