@@ -1,5 +1,6 @@
 import React from 'react'
 import { ToastProvider } from '@/components/toast'
+import { CashierNav } from '@/components/CashierNav'
 
 export default function CashierLayout({
   children,
@@ -8,8 +9,11 @@ export default function CashierLayout({
 }) {
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-gray-50">
-        {children}
+      <div className="flex h-screen bg-gray-50">
+        <CashierNav />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
       </div>
     </ToastProvider>
   )

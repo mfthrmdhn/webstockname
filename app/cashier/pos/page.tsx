@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/components/toast'
 import { ShoppingCart, Search, Plus, Minus, X } from 'lucide-react'
-import { getAccessToken, logout } from '@/lib/auth/client'
+import { getAccessToken } from '@/lib/auth/client'
 
 interface Product {
   id: string
@@ -262,14 +262,11 @@ export default function PosPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center mb-4">
           <div className="flex items-center gap-2">
             <ShoppingCart className="h-6 w-6" />
             <h1 className="text-xl font-bold">Point of Sale</h1>
           </div>
-          <Button variant="outline" size="sm" onClick={async () => { await logout(); window.location.href = '/login' }}>
-            Log Out
-          </Button>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Left panel: Product search */}
