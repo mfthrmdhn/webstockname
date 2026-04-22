@@ -30,6 +30,8 @@ interface Product {
   name: string
   sku: string
   category?: string
+  storeQty?: number
+  warehouseQty?: number
   createdAt: string
 }
 
@@ -39,6 +41,8 @@ const createProductSchema = z.object({
   category: z.string().max(100).optional(),
   sellingPrice: z.number().positive('Selling price must be positive'),
   cost: z.number().min(0, 'Cost must be non-negative'),
+  storeQty: z.number().min(0, 'Store quantity must be non-negative').optional(),
+  warehouseQty: z.number().min(0, 'Warehouse quantity must be non-negative').optional(),
 })
 
 type CreateProductForm = z.infer<typeof createProductSchema>
@@ -50,7 +54,9 @@ export default function ProductsPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [newProductSellingPrice, setNewProductSellingPrice] = useState('')
   const [newProductCost, setNewProductCost] = useState('')
-  const [createForm, setCreateForm] = useState<Omit<CreateProductForm, 'sellingPrice' | 'cost'>>({
+  const [newProductStoreQty, setNewProductStoreQty] = useState('')
+  const [newProductWarehouseQty, setNewProductWarehouseQty] = useState('')
+  const [createForm, setCreateForm] = useState<Omit<CreateProductForm, 'sellingPrice' | 'cost' | 'storeQty' | 'warehouseQty'>>({
     name: '',
     sku: '',
     category: '',
@@ -96,6 +102,8 @@ export default function ProductsPage() {
         ...createForm,
         sellingPrice: parseFloat(newProductSellingPrice),
         cost: parseFloat(newProductCost),
+        storeQty: newProductStoreQty ? parseInt(newProductStoreQty) : 0,
+        warehouseQty: newProductWarehouseQty ? parseInt(newProductWarehouseQty) : 0,
       })
 
       if (!validation.success) {
@@ -133,6 +141,8 @@ export default function ProductsPage() {
       setCreateForm({ name: '', sku: '', category: '' })
       setNewProductSellingPrice('')
       setNewProductCost('')
+      setNewProductStoreQty('')
+      setNewProductWarehouseQty('')
       setCreateOpen(false)
       addToast('Product created successfully', 'success')
     } catch (error) {
@@ -249,6 +259,36 @@ export default function ProductsPage() {
                   <p className="text-red-600 text-sm mt-1">{createErrors.cost}</p>
                 )}
               </div>
+              <div>
+                <Label htmlFor="store-qty">Store Quantity</Label>
+                <Input
+                  id="store-qty"
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 5"
+                  value={newProductStoreQty}
+                  onChange={(e) => setNewProductStoreQty(e.target.value)}
+                  className="mt-1"
+                />
+                {createErrors.storeQty && (
+                  <p className="text-red-600 text-sm mt-1">{createErrors.storeQty}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="warehouse-qty">Warehouse Quantity</Label>
+                <Input
+                  id="warehouse-qty"
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 10"
+                  value={newProductWarehouseQty}
+                  onChange={(e) => setNewProductWarehouseQty(e.target.value)}
+                  className="mt-1"
+                />
+                {createErrors.warehouseQty && (
+                  <p className="text-red-600 text-sm mt-1">{createErrors.warehouseQty}</p>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
@@ -267,13 +307,15 @@ export default function ProductsPage() {
               <TableHead>Product Name</TableHead>
               <TableHead>SKU</TableHead>
               <TableHead>Category</TableHead>
+              <TableHead>Store Qty</TableHead>
+              <TableHead>Warehouse Qty</TableHead>
               <TableHead>Created</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   No products found
                 </TableCell>
               </TableRow>
@@ -287,6 +329,8 @@ export default function ProductsPage() {
                     </code>
                   </TableCell>
                   <TableCell>{product.category || '-'}</TableCell>
+                  <TableCell className="text-center">{product.storeQty || 0}</TableCell>
+                  <TableCell className="text-center">{product.warehouseQty || 0}</TableCell>
                   <TableCell className="text-sm text-gray-500">
                     {new Date(product.createdAt).toLocaleDateString()}
                   </TableCell>

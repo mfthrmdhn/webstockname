@@ -11,6 +11,8 @@ const createProductSchema = z.object({
   category: z.string().min(1).max(100).optional(),
   sellingPrice: z.number().positive('Selling price must be positive'),
   cost: z.number().min(0, 'Cost must be non-negative'),
+  storeQty: z.number().min(0, 'Store quantity must be non-negative').optional(),
+  warehouseQty: z.number().min(0, 'Warehouse quantity must be non-negative').optional(),
 })
 
 /**
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { name, sku, category, sellingPrice, cost } = validation.data
+    const { name, sku, category, sellingPrice, cost, storeQty, warehouseQty } = validation.data
 
     // Check if SKU already exists
     const existingProduct = await prisma.product.findUnique({
@@ -63,6 +65,8 @@ export async function POST(request: NextRequest) {
         category: category || null,
         sellingPrice,
         cost,
+        storeQty: storeQty || 0,
+        warehouseQty: warehouseQty || 0,
         updatedBy: req.user?.userId
       }
     })
@@ -77,6 +81,8 @@ export async function POST(request: NextRequest) {
         name: newProduct.name,
         sku: newProduct.sku,
         category: newProduct.category,
+        storeQty: newProduct.storeQty,
+        warehouseQty: newProduct.warehouseQty,
         createdAt: newProduct.createdAt
       },
       { status: 201 }
@@ -123,6 +129,8 @@ export async function GET(request: NextRequest) {
         name: true,
         sku: true,
         category: true,
+        storeQty: true,
+        warehouseQty: true,
         createdAt: true
       }
     })
