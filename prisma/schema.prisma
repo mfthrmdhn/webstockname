@@ -89,6 +89,7 @@ model Product {
   warehouseQty Int       @default(0) @map("warehouse_qty")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedBy    String?   @map("updated_by")
+  isActive     Boolean   @default(true) @map("is_active")
 
   saleItems SaleItem[]
 
