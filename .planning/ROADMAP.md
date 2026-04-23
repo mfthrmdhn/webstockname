@@ -1,8 +1,8 @@
 # WebStockName Roadmap
 
 **Created:** 2026-04-14  
-**Granularity:** Coarse (3 phases)  
-**Coverage:** 45/45 v1 requirements mapped
+**Granularity:** Coarse (3 phases + 1 Phase 4)  
+**Coverage:** 45/45 v1 requirements mapped + Phase 4 product lifecycle
 
 ---
 
@@ -11,6 +11,7 @@
 - [x] **Phase 1: Foundation** - Secure authentication, role-based access, audit infrastructure ✓ 2026-04-14
 - [x] **Phase 2: Operations** - Inventory management, sales processing, atomic transactions ✓ 2026-04-21
 - [x] **Phase 3: Intelligence** - Financial reporting, incentive tracking, reconciliation ✓ 2026-04-21
+- [ ] **Phase 4: Product Management CRUD** - Product edit and delete with safety checks and audit logging
 
 ---
 
@@ -30,7 +31,7 @@
 4. Every state-changing operation (login, logout, user create, etc.) is recorded in append-only audit log that cannot be deleted or edited
 5. All endpoints enforce role-based access at API level before any business logic executes
 
-**Plans:** TBD
+**Plans:** 9 plans
 
 **UI hint**: yes
 
@@ -97,6 +98,33 @@ Plans:
 
 ---
 
+### Phase 4: Product Management CRUD Operations
+**Goal:** Superadmin can edit and delete products with full audit trail. Product lifecycle is managed safely with historical data integrity (sales with existing prices are unaffected by subsequent edits; deletions are prevented if products have sales history).
+
+**Depends on:** Phase 2 (product data model required), Phase 3 (reporting context)
+
+**Requirements:** PROD-01, PROD-02, PROD-03, PROD-04, AUDIT-01, AUDIT-02, AUDIT-03, AUDIT-04, AUDIT-05, AUDIT-06
+
+**Success Criteria** (what must be TRUE):
+1. Superadmin can click Edit on any product row and modify all fields (name, SKU, prices, quantities)
+2. Edit form shows original value next to current field (before/after visibility)
+3. Superadmin can click Delete on any product row
+4. If product has no sales: deletion succeeds, product is removed, PRODUCT_DELETE logged
+5. If product has sales: error dialog shows sales count, soft-delete button offered
+6. All edits logged with before/after values (delta only: changed fields)
+7. All deletions logged with full product snapshot
+8. Edit and delete operations are superadmin-only (RBAC enforced)
+
+**Plans:** 2 plans
+
+Plans:
+- [x] 04-01-PLAN.md — Backend API routes (PATCH/DELETE), Prisma schema (is_active field), logAction extension
+- [x] 04-02-PLAN.md — Frontend edit modal, delete confirmation, product list integration
+
+**UI hint**: yes
+
+---
+
 ## Progress Table
 
 | Phase | Plans Complete | Status | Completed |
@@ -104,6 +132,7 @@ Plans:
 | 1. Foundation | 9/9 | COMPLETE | 01-01 through 01-09 |
 | 2. Operations | 8/11 | In progress | 02-01 through 02-08, gap closure pending (02-09, 02-10, 02-11) |
 | 3. Intelligence | 0/4 | Not started | - |
+| 4. Product CRUD | 0/2 | Ready for execution | 04-01, 04-02 planned |
 
 ---
 
@@ -137,6 +166,13 @@ Plans:
 - Supporting evidence (sales reports) attached to each incentive entry
 - Rationale: Prevents overpayment and ensures accountability in payroll
 
+**Phase 4 — Product Edit Safety & Price Snapshot Integrity**
+- Products can be edited at any time, even if they have sales history
+- Historical sales use price snapshots captured at sale time (Phase 2), not current prices
+- This means editing product prices does NOT affect margin calculations for past sales
+- Hard-delete is blocked if product has sales; soft-delete (is_active=false) is offered as alternative
+- Rationale: Business needs flexibility to update product info; audit trail provides accountability; historical data integrity is preserved via price snapshots
+
 ### Pitfall Prevention
 
 This roadmap directly addresses critical pitfalls identified in research:
@@ -146,7 +182,7 @@ This roadmap directly addresses critical pitfalls identified in research:
 - **Pitfall 3 (Race Conditions)**: Phase 2 uses database-level row locks and transaction isolation
 - **Pitfall 4 (RBAC Misconfiguration)**: Phase 1 establishes documented three-role system with endpoint enforcement
 - **Pitfall 5 (Reconciliation Gaps)**: Phase 3 implements end-of-day reconciliation with variance detection
-- **Pitfall 6 (Audit Trail Gaps)**: Phase 1 establishes immutable logging; Phase 2 logs all state changes
+- **Pitfall 6 (Audit Trail Gaps)**: Phase 1 establishes immutable logging; Phase 2 logs all state changes; Phase 4 logs product updates
 - **Pitfall 7 (Incentive Decoupling)**: Phase 3 requires verification against actual sales data
 - **Pitfall 8 (Shortage Detection Delay)**: Phase 3 includes daily reconciliation and variance alerts
 - **Pitfall 9 (Warehouse/Store Split)**: Phase 2 separates inventory by location with transfer workflow
@@ -157,17 +193,8 @@ This roadmap directly addresses critical pitfalls identified in research:
 **Stack:** PostgreSQL for transactional data + audit logs, REST API, role-based middleware  
 **Scaling:** Designed for 0-100 daily transactions (single store); indices and caching added in Phase 3+ if needed
 
-### Phase 4: Product management CRUD operations: implement edit and delete endpoints and UI controls for product lifecycle management in admin interface. Includes PUT/PATCH endpoint, DELETE endpoint, edit modal, confirmation dialogs, and audit logging for PRODUCT_UPDATE and PRODUCT_DELETE events.
-
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 3
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd-plan-phase 4 to break down)
-
 ---
 
 *Roadmap created: 2026-04-14*
 *Gap closure plans added: 2026-04-22*
+*Phase 4 planning completed: 2026-04-23*
