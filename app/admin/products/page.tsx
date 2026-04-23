@@ -89,6 +89,7 @@ export default function ProductsPage() {
     storeQty: '',
     warehouseQty: '',
     category: '',
+    isActive: true,
   })
   const [editErrors, setEditErrors] = useState<Record<string, string>>({})
   const [editOriginalValues, setEditOriginalValues] = useState<Record<string, unknown>>({})
@@ -199,6 +200,7 @@ export default function ProductsPage() {
       storeQty: product.storeQty?.toString() || '',
       warehouseQty: product.warehouseQty?.toString() || '',
       category: product.category || '',
+      isActive: product.isActive || true,
     }
     setEditForm(formValues)
     setEditOriginalValues({
@@ -209,6 +211,7 @@ export default function ProductsPage() {
       storeQty: product.storeQty?.toString() || '',
       warehouseQty: product.warehouseQty?.toString() || '',
       category: product.category || '',
+      isActive: product.isActive || true,
     })
     setEditErrors({})
     setEditOpen(true)
@@ -262,7 +265,7 @@ export default function ProductsPage() {
       setProducts(products.map((p) => (p.id === updatedProduct.id ? { ...p, ...updatedProduct } : p)))
       setEditOpen(false)
       setEditingProduct(null)
-      setEditForm({ name: '', sku: '', sellingPrice: '', cost: '', storeQty: '', warehouseQty: '', category: '' })
+      setEditForm({ name: '', sku: '', sellingPrice: '', cost: '', storeQty: '', warehouseQty: '', category: '', isActive: true })
       addToast('Product updated successfully', 'success')
     } catch (error) {
       console.error('Error updating product:', error)
@@ -607,6 +610,18 @@ export default function ProductsPage() {
                   placeholder="e.g., Electronics"
                 />
                 {editErrors.category && <p className="text-red-600 text-sm mt-1">{editErrors.category}</p>}
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="edit-is-active">
+                  <input
+                    id="edit-is-active"
+                    type="checkbox"
+                    checked={editForm.isActive as boolean}
+                    onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                    className="mr-2"
+                  />
+                  Product Active (Inactive products don't appear in lists)
+                </Label>
               </div>
             </div>
           </div>

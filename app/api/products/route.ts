@@ -81,8 +81,11 @@ export async function POST(request: NextRequest) {
         name: newProduct.name,
         sku: newProduct.sku,
         category: newProduct.category,
+        sellingPrice: newProduct.sellingPrice,
+        cost: newProduct.cost,
         storeQty: newProduct.storeQty,
         warehouseQty: newProduct.warehouseQty,
+        isActive: newProduct.isActive,
         createdAt: newProduct.createdAt
       },
       { status: 201 }
@@ -129,8 +132,11 @@ export async function GET(request: NextRequest) {
         name: true,
         sku: true,
         category: true,
+        sellingPrice: true,
+        cost: true,
         storeQty: true,
         warehouseQty: true,
+        isActive: true,
         createdAt: true
       }
     })
