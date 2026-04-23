@@ -118,7 +118,7 @@ export async function PATCH(
           action: 'PRODUCT_UPDATE',
           entityType: 'PRODUCT',
           entityId: id,
-          metadata: { before, after, changedFields: changed },
+          metadata: { before, after, changedFields: changed } as Prisma.InputJsonValue,
         },
       })
       return result

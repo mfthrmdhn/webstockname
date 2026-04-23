@@ -145,7 +145,7 @@ export default function ProductsPage() {
 
       if (!validation.success) {
         const errors: Record<string, string> = {}
-        validation.error.errors.forEach((err) => {
+        validation.error.issues.forEach((err) => {
           errors[err.path[0] as string] = err.message
         })
         setCreateErrors(errors)
@@ -230,7 +230,7 @@ export default function ProductsPage() {
 
       if (!validation.success) {
         const errors: Record<string, string> = {}
-        validation.error.errors.forEach((err) => {
+        validation.error.issues.forEach((err) => {
           errors[err.path[0] as string] = err.message
         })
         setEditErrors(errors)
