@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authMiddleware, AuthenticatedRequest } from '@/middleware/auth'
 import { rbacMiddleware } from '@/middleware/rbac'
-import { logAction } from '@/lib/audit/logger'
 import { z } from 'zod'
+
+const cuidSchema = z.string().cuid()
 
 const updateProductSchema = z.object({
   name: z.string().min(1).max(255).optional(),
@@ -15,17 +16,14 @@ const updateProductSchema = z.object({
   is_active: z.boolean().optional(),
 })
 
-function extractId(request: NextRequest): string | null {
-  const parts = request.nextUrl.pathname.split('/')
-  const id = parts.pop()
-  return id && id.length > 0 ? id : null
-}
-
 /**
  * PATCH /api/products/[id] - Update a product (SUPERADMIN only)
  * Logs only changed fields (before/after delta) to AuditLog
  */
-export async function PATCH(request: NextRequest) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   const authResult = await authMiddleware(request as AuthenticatedRequest)
   if (authResult) return authResult
 
@@ -34,10 +32,11 @@ export async function PATCH(request: NextRequest) {
   )
   if (rbacResult) return rbacResult
 
-  const id = extractId(request)
-  if (!id) {
+  const idResult = cuidSchema.safeParse(params.id)
+  if (!idResult.success) {
     return NextResponse.json({ error: 'Invalid product ID' }, { status: 400 })
   }
+  const id = idResult.data
 
   try {
     const prisma = (await import('@/lib/db')).default
@@ -105,19 +104,24 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'No changes' }, { status: 200 })
     }
 
-    // Update product in transaction
+    const req = request as AuthenticatedRequest
+
+    // Update product and write audit log atomically in one transaction
     const updated = await prisma.$transaction(async (tx) => {
-      return await tx.product.update({
+      const result = await tx.product.update({
         where: { id },
         data: prismaData as Parameters<typeof tx.product.update>[0]['data'],
       })
-    })
-
-    const req = request as AuthenticatedRequest
-    await logAction(req.user!.userId, 'PRODUCT_UPDATE', 'PRODUCT', id, {
-      before,
-      after,
-      changedFields: changed,
+      await tx.auditLog.create({
+        data: {
+          userId: req.user!.userId,
+          action: 'PRODUCT_UPDATE',
+          entityType: 'PRODUCT',
+          entityId: id,
+          metadata: { before, after, changedFields: changed },
+        },
+      })
+      return result
     })
 
     return NextResponse.json(
@@ -148,7 +152,10 @@ export async function PATCH(request: NextRequest) {
  * DELETE /api/products/[id] - Delete a product (SUPERADMIN only)
  * Blocks deletion if product has sales history; logs full snapshot on success
  */
-export async function DELETE(request: NextRequest) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   const authResult = await authMiddleware(request as AuthenticatedRequest)
   if (authResult) return authResult
 
@@ -157,10 +164,11 @@ export async function DELETE(request: NextRequest) {
   )
   if (rbacResult) return rbacResult
 
-  const id = extractId(request)
-  if (!id) {
+  const idResult = cuidSchema.safeParse(params.id)
+  if (!idResult.success) {
     return NextResponse.json({ error: 'Invalid product ID' }, { status: 400 })
   }
+  const id = idResult.data
 
   try {
     const prisma = (await import('@/lib/db')).default
@@ -201,15 +209,20 @@ export async function DELETE(request: NextRequest) {
       createdAt: product.createdAt,
     }
 
-    // Delete product in transaction
+    const req = request as AuthenticatedRequest
+
+    // Delete product and write audit log atomically in one transaction
     await prisma.$transaction(async (tx) => {
       await tx.product.delete({ where: { id } })
-    })
-
-    const req = request as AuthenticatedRequest
-    await logAction(req.user!.userId, 'PRODUCT_DELETE', 'PRODUCT', id, {
-      before: snapshot,
-      after: null,
+      await tx.auditLog.create({
+        data: {
+          userId: req.user!.userId,
+          action: 'PRODUCT_DELETE',
+          entityType: 'PRODUCT',
+          entityId: id,
+          metadata: { before: snapshot, after: null },
+        },
+      })
     })
 
     return NextResponse.json(
