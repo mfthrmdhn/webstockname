@@ -55,12 +55,18 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Audit & Accountability
 
-- [ ] **AUDIT-01**: All transactions are recorded with timestamp, user, and action taken
-- [ ] **AUDIT-02**: Inventory changes are logged with before/after quantities
-- [ ] **AUDIT-03**: User login/logout events are recorded in audit trail
-- [ ] **AUDIT-04**: Incentive entries are recorded with who entered it and when
-- [ ] **AUDIT-05**: Superadmin can view full audit trail filtered by date range and user
-- [ ] **AUDIT-06**: Audit logs cannot be edited or deleted (append-only)
+- [x] **AUDIT-01
+**: All transactions are recorded with timestamp, user, and action taken
+- [x] **AUDIT-02
+**: Inventory changes are logged with before/after quantities
+- [x] **AUDIT-03
+**: User login/logout events are recorded in audit trail
+- [x] **AUDIT-04
+**: Incentive entries are recorded with who entered it and when
+- [x] **AUDIT-05
+**: Superadmin can view full audit trail filtered by date range and user
+- [x] **AUDIT-06
+**: Audit logs cannot be edited or deleted (append-only)
 
 ### User Management
 
@@ -72,10 +78,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Product Management
 
-- [ ] **PROD-01**: Superadmin can create product entries with SKU, name, selling price
-- [ ] **PROD-02**: Superadmin can set cost of goods for each product (for margin tracking)
-- [ ] **PROD-03**: Superadmin can assign barcode to product for scanning
-- [ ] **PROD-04**: Product list is accessible to cashiers for barcode scanning
+- [x] **PROD-01
+**: Superadmin can create product entries with SKU, name, selling price
+- [x] **PROD-02
+**: Superadmin can set cost of goods for each product (for margin tracking)
+- [x] **PROD-03
+**: Superadmin can assign barcode to product for scanning
+- [x] **PROD-04
+**: Product list is accessible to cashiers for barcode scanning
 
 ## v2 Requirements
 
