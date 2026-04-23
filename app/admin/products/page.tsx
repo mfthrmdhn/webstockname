@@ -30,6 +30,8 @@ interface Product {
   name: string
   sku: string
   category?: string
+  sellingPrice?: number
+  cost?: number
   storeQty?: number
   warehouseQty?: number
   createdAt: string
@@ -45,12 +47,24 @@ const createProductSchema = z.object({
   warehouseQty: z.number().min(0, 'Warehouse quantity must be non-negative').optional(),
 })
 
+const updateProductSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(255).optional(),
+  sku: z.string().min(3, 'SKU must be at least 3 characters').max(50).optional(),
+  category: z.string().max(100).optional().nullable(),
+  sellingPrice: z.number().positive('Selling price must be positive').optional(),
+  cost: z.number().min(0, 'Cost must be non-negative').optional(),
+  storeQty: z.number().min(0, 'Store quantity must be non-negative').optional(),
+  warehouseQty: z.number().min(0, 'Warehouse quantity must be non-negative').optional(),
+})
+
 type CreateProductForm = z.infer<typeof createProductSchema>
 
 export default function ProductsPage() {
   const { addToast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Create dialog state
   const [createOpen, setCreateOpen] = useState(false)
   const [newProductSellingPrice, setNewProductSellingPrice] = useState('')
   const [newProductCost, setNewProductCost] = useState('')
@@ -62,6 +76,27 @@ export default function ProductsPage() {
     category: '',
   })
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({})
+
+  // Edit dialog state
+  const [editOpen, setEditOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [editForm, setEditForm] = useState({
+    name: '',
+    sku: '',
+    sellingPrice: '',
+    cost: '',
+    storeQty: '',
+    warehouseQty: '',
+    category: '',
+  })
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({})
+  const [editOriginalValues, setEditOriginalValues] = useState<Record<string, unknown>>({})
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
+  const [deleteError, setDeleteError] = useState<{ salesCount: number } | null>(null)
+  const [deleteSoftDeletePending, setDeleteSoftDeletePending] = useState(false)
 
   // Fetch products
   useEffect(() => {
@@ -148,6 +183,176 @@ export default function ProductsPage() {
     } catch (error) {
       console.error('Error creating product:', error)
       addToast('Error creating product', 'error')
+    }
+  }
+
+  // Open edit dialog with product values pre-filled
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product)
+    const formValues = {
+      name: product.name,
+      sku: product.sku,
+      sellingPrice: product.sellingPrice?.toString() || '',
+      cost: product.cost?.toString() || '',
+      storeQty: product.storeQty?.toString() || '',
+      warehouseQty: product.warehouseQty?.toString() || '',
+      category: product.category || '',
+    }
+    setEditForm(formValues)
+    setEditOriginalValues({
+      name: product.name,
+      sku: product.sku,
+      sellingPrice: product.sellingPrice?.toString() || '',
+      cost: product.cost?.toString() || '',
+      storeQty: product.storeQty?.toString() || '',
+      warehouseQty: product.warehouseQty?.toString() || '',
+      category: product.category || '',
+    })
+    setEditErrors({})
+    setEditOpen(true)
+  }
+
+  // Handle update product
+  const handleUpdateProduct = async () => {
+    try {
+      setEditErrors({})
+      const validation = updateProductSchema.safeParse({
+        name: editForm.name || undefined,
+        sku: editForm.sku || undefined,
+        sellingPrice: editForm.sellingPrice ? parseFloat(editForm.sellingPrice) : undefined,
+        cost: editForm.cost ? parseFloat(editForm.cost) : undefined,
+        storeQty: editForm.storeQty ? parseInt(editForm.storeQty) : undefined,
+        warehouseQty: editForm.warehouseQty ? parseInt(editForm.warehouseQty) : undefined,
+        category: editForm.category || undefined,
+      })
+
+      if (!validation.success) {
+        const errors: Record<string, string> = {}
+        validation.error.errors.forEach((err) => {
+          errors[err.path[0] as string] = err.message
+        })
+        setEditErrors(errors)
+        return
+      }
+
+      const token = localStorage.getItem('accessToken')
+      if (!token || !editingProduct) {
+        addToast('Not authenticated', 'error')
+        return
+      }
+
+      const response = await fetch(`/api/products/${editingProduct.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(validation.data),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        addToast(error.error || 'Failed to update product', 'error')
+        return
+      }
+
+      const updatedProduct = await response.json()
+      setProducts(products.map((p) => (p.id === updatedProduct.id ? { ...p, ...updatedProduct } : p)))
+      setEditOpen(false)
+      setEditingProduct(null)
+      setEditForm({ name: '', sku: '', sellingPrice: '', cost: '', storeQty: '', warehouseQty: '', category: '' })
+      addToast('Product updated successfully', 'success')
+    } catch (error) {
+      console.error('Error updating product:', error)
+      addToast('Error updating product', 'error')
+    }
+  }
+
+  // Open delete confirmation dialog
+  const openDeleteDialog = (product: Product) => {
+    setDeletingProduct(product)
+    setDeleteError(null)
+    setDeleteDialogOpen(true)
+  }
+
+  // Handle hard-delete product
+  const handleDeleteProduct = async () => {
+    if (!deletingProduct) return
+
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        addToast('Not authenticated', 'error')
+        return
+      }
+
+      const response = await fetch(`/api/products/${deletingProduct.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        if (error.salesCount !== undefined) {
+          // Product has sales — show soft-delete fallback
+          setDeleteError({ salesCount: error.salesCount })
+          return
+        }
+        addToast(error.error || 'Failed to delete product', 'error')
+        setDeleteDialogOpen(false)
+        return
+      }
+
+      // Hard delete succeeded
+      setProducts(products.filter((p) => p.id !== deletingProduct.id))
+      setDeleteDialogOpen(false)
+      setDeletingProduct(null)
+      addToast('Product deleted successfully', 'success')
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      addToast('Error deleting product', 'error')
+    }
+  }
+
+  // Handle soft-delete (deactivate) product
+  const handleSoftDeleteProduct = async () => {
+    if (!deletingProduct) return
+
+    try {
+      setDeleteSoftDeletePending(true)
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        addToast('Not authenticated', 'error')
+        return
+      }
+
+      const response = await fetch(`/api/products/${deletingProduct.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ is_active: false }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        addToast(error.error || 'Failed to deactivate product', 'error')
+        return
+      }
+
+      setProducts(products.filter((p) => p.id !== deletingProduct.id))
+      setDeleteDialogOpen(false)
+      setDeletingProduct(null)
+      setDeleteError(null)
+      addToast('Product deactivated successfully (can be reactivated later)', 'success')
+    } catch (error) {
+      console.error('Error deactivating product:', error)
+      addToast('Error deactivating product', 'error')
+    } finally {
+      setDeleteSoftDeletePending(false)
     }
   }
 
@@ -300,6 +505,179 @@ export default function ProductsPage() {
         </Dialog>
       </div>
 
+      {/* Edit Product Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>
+              Update product details. Original values are shown below each field.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-name">Product Name</Label>
+                <p className="text-xs text-gray-500 mb-1">Current: {editOriginalValues.name as string}</p>
+                <Input
+                  id="edit-name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  placeholder={editOriginalValues.name as string}
+                />
+                {editErrors.name && <p className="text-red-600 text-sm mt-1">{editErrors.name}</p>}
+              </div>
+              <div>
+                <Label htmlFor="edit-sku">SKU</Label>
+                <p className="text-xs text-gray-500 mb-1">Current: {editOriginalValues.sku as string}</p>
+                <Input
+                  id="edit-sku"
+                  value={editForm.sku}
+                  onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })}
+                  placeholder={editOriginalValues.sku as string}
+                />
+                {editErrors.sku && <p className="text-red-600 text-sm mt-1">{editErrors.sku}</p>}
+              </div>
+              <div>
+                <Label htmlFor="edit-selling-price">Selling Price</Label>
+                <p className="text-xs text-gray-500 mb-1">Current: {editOriginalValues.sellingPrice as string}</p>
+                <Input
+                  id="edit-selling-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.sellingPrice}
+                  onChange={(e) => setEditForm({ ...editForm, sellingPrice: e.target.value })}
+                  placeholder={editOriginalValues.sellingPrice as string}
+                />
+                {editErrors.sellingPrice && <p className="text-red-600 text-sm mt-1">{editErrors.sellingPrice}</p>}
+              </div>
+              <div>
+                <Label htmlFor="edit-cost">Cost</Label>
+                <p className="text-xs text-gray-500 mb-1">Current: {editOriginalValues.cost as string}</p>
+                <Input
+                  id="edit-cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.cost}
+                  onChange={(e) => setEditForm({ ...editForm, cost: e.target.value })}
+                  placeholder={editOriginalValues.cost as string}
+                />
+                {editErrors.cost && <p className="text-red-600 text-sm mt-1">{editErrors.cost}</p>}
+              </div>
+              <div>
+                <Label htmlFor="edit-store-qty">Store Quantity</Label>
+                <p className="text-xs text-gray-500 mb-1">Current: {editOriginalValues.storeQty as string}</p>
+                <Input
+                  id="edit-store-qty"
+                  type="number"
+                  min="0"
+                  value={editForm.storeQty}
+                  onChange={(e) => setEditForm({ ...editForm, storeQty: e.target.value })}
+                  placeholder={editOriginalValues.storeQty as string}
+                />
+                {editErrors.storeQty && <p className="text-red-600 text-sm mt-1">{editErrors.storeQty}</p>}
+              </div>
+              <div>
+                <Label htmlFor="edit-warehouse-qty">Warehouse Quantity</Label>
+                <p className="text-xs text-gray-500 mb-1">Current: {editOriginalValues.warehouseQty as string}</p>
+                <Input
+                  id="edit-warehouse-qty"
+                  type="number"
+                  min="0"
+                  value={editForm.warehouseQty}
+                  onChange={(e) => setEditForm({ ...editForm, warehouseQty: e.target.value })}
+                  placeholder={editOriginalValues.warehouseQty as string}
+                />
+                {editErrors.warehouseQty && <p className="text-red-600 text-sm mt-1">{editErrors.warehouseQty}</p>}
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="edit-category">Category</Label>
+                <p className="text-xs text-gray-500 mb-1">Current: {(editOriginalValues.category as string) || 'None'}</p>
+                <Input
+                  id="edit-category"
+                  value={editForm.category}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                  placeholder="e.g., Electronics"
+                />
+                {editErrors.category && <p className="text-red-600 text-sm mt-1">{editErrors.category}</p>}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateProduct}>Update Product</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Product?</DialogTitle>
+          </DialogHeader>
+
+          {deleteError ? (
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded p-3">
+                <p className="text-sm font-medium text-amber-900">
+                  Cannot delete &quot;{deletingProduct?.name}&quot;
+                </p>
+                <p className="text-sm text-amber-800 mt-1">
+                  This product has {deleteError.salesCount} sale(s) in history. Deletion is permanent but
+                  won&apos;t affect past reports (they use sale-time prices).
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Alternative: Deactivate instead</p>
+                <p className="text-sm text-gray-600">
+                  Deactivated products won&apos;t appear in the POS, but their history is preserved.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm">
+                Permanently delete <strong>{deletingProduct?.name}</strong>?
+              </p>
+              <p className="text-xs text-gray-500">
+                This product has no sales history. Deletion is permanent.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            {deleteError ? (
+              <>
+                <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleSoftDeleteProduct}
+                  disabled={deleteSoftDeletePending}
+                >
+                  {deleteSoftDeletePending ? 'Deactivating...' : 'Deactivate Instead'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteProduct}>
+                  Delete Permanently
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="bg-white rounded-lg border border-gray-200">
         <Table>
           <TableHeader>
@@ -310,12 +688,13 @@ export default function ProductsPage() {
               <TableHead>Store Qty</TableHead>
               <TableHead>Warehouse Qty</TableHead>
               <TableHead>Created</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                   No products found
                 </TableCell>
               </TableRow>
@@ -333,6 +712,22 @@ export default function ProductsPage() {
                   <TableCell className="text-center">{product.warehouseQty || 0}</TableCell>
                   <TableCell className="text-sm text-gray-500">
                     {new Date(product.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => openEditDialog(product)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => openDeleteDialog(product)}
+                    >
+                      Delete
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))
