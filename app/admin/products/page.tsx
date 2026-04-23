@@ -29,6 +29,7 @@ interface Product {
   id: string
   name: string
   sku: string
+  isActive: boolean
   category?: string
   sellingPrice?: number
   cost?: number
@@ -97,6 +98,7 @@ export default function ProductsPage() {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
   const [deleteError, setDeleteError] = useState<{ salesCount: number } | null>(null)
   const [deleteSoftDeletePending, setDeleteSoftDeletePending] = useState(false)
+  const [deleteHardPending, setDeleteHardPending] = useState(false)
 
   // Fetch products
   useEffect(() => {
@@ -137,8 +139,8 @@ export default function ProductsPage() {
         ...createForm,
         sellingPrice: parseFloat(newProductSellingPrice),
         cost: parseFloat(newProductCost),
-        storeQty: newProductStoreQty ? parseInt(newProductStoreQty) : 0,
-        warehouseQty: newProductWarehouseQty ? parseInt(newProductWarehouseQty) : 0,
+        storeQty: newProductStoreQty !== '' ? parseInt(newProductStoreQty) : undefined,
+        warehouseQty: newProductWarehouseQty !== '' ? parseInt(newProductWarehouseQty) : undefined,
       })
 
       if (!validation.success) {
@@ -280,6 +282,7 @@ export default function ProductsPage() {
     if (!deletingProduct) return
 
     try {
+      setDeleteHardPending(true)
       const token = localStorage.getItem('accessToken')
       if (!token) {
         addToast('Not authenticated', 'error')
@@ -313,6 +316,8 @@ export default function ProductsPage() {
     } catch (error) {
       console.error('Error deleting product:', error)
       addToast('Error deleting product', 'error')
+    } finally {
+      setDeleteHardPending(false)
     }
   }
 
@@ -669,8 +674,12 @@ export default function ProductsPage() {
                 <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button variant="destructive" onClick={handleDeleteProduct}>
-                  Delete Permanently
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteProduct}
+                  disabled={deleteHardPending}
+                >
+                  {deleteHardPending ? 'Deleting...' : 'Delete Permanently'}
                 </Button>
               </>
             )}
@@ -701,7 +710,12 @@ export default function ProductsPage() {
             ) : (
               products.map((product) => (
                 <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell className="font-medium">
+                    {product.name}
+                    {!product.isActive && (
+                      <span className="text-xs bg-gray-200 text-gray-600 px-1 rounded ml-1">Inactive</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <code className="bg-gray-100 px-2 py-1 rounded text-sm">
                       {product.sku}
