@@ -7,6 +7,7 @@
  *   LOGIN, LOGOUT
  *   SALE_CREATE, INVENTORY_UPDATE
  *   INCENTIVE_CREATE  -- Phase 3: incentive record creation by Superadmin (INCENT-03, AUDIT-04)
+ *   PRODUCT_CREATE, PRODUCT_UPDATE, PRODUCT_DELETE  -- Phase 4: product lifecycle management
  */
 
 export async function logAction(
