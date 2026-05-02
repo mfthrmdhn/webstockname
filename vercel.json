@@ -1,0 +1,17 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm ci",
+  "framework": "nextjs",
+  "env": {
+    "DATABASE_URL": {
+      "description": "PostgreSQL connection string for production database"
+    },
+    "JWT_SECRET": {
+      "description": "Secret key for JWT token signing (generate a strong random string)"
+    },
+    "NODE_ENV": {
+      "value": "production"
+    }
+  }
+}

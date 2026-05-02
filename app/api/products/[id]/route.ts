@@ -22,7 +22,7 @@ const updateProductSchema = z.object({
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await authMiddleware(request as AuthenticatedRequest)
   if (authResult) return authResult
@@ -32,7 +32,8 @@ export async function PATCH(
   )
   if (rbacResult) return rbacResult
 
-  const idResult = cuidSchema.safeParse(params.id)
+  const { id: paramId } = await params
+  const idResult = cuidSchema.safeParse(paramId)
   if (!idResult.success) {
     return NextResponse.json({ error: 'Invalid product ID' }, { status: 400 })
   }
@@ -154,7 +155,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await authMiddleware(request as AuthenticatedRequest)
   if (authResult) return authResult
@@ -164,7 +165,8 @@ export async function DELETE(
   )
   if (rbacResult) return rbacResult
 
-  const idResult = cuidSchema.safeParse(params.id)
+  const { id: paramId } = await params
+  const idResult = cuidSchema.safeParse(paramId)
   if (!idResult.success) {
     return NextResponse.json({ error: 'Invalid product ID' }, { status: 400 })
   }
