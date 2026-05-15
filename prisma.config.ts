@@ -5,14 +5,7 @@ import { defineConfig } from "prisma/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
-  migrations: {
-    path: "prisma/migrations",
-  },
-  client: {
-    output: "./node_modules/.prisma/client",
-  },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: process.env["DATABASE_URL"] || "postgresql://localhost:5432/webstockname",
   },
-  seed: "node prisma/seed.cjs",
 });

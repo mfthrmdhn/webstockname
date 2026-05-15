@@ -10,6 +10,8 @@
  *   PRODUCT_CREATE, PRODUCT_UPDATE, PRODUCT_DELETE  -- Phase 4: product lifecycle management
  */
 
+import { Prisma } from '@prisma/client'
+
 export async function logAction(
   userId: string,
   action: string,
@@ -25,7 +27,7 @@ export async function logAction(
       action,
       entityType,
       entityId: entityId || null,
-      metadata: metadata || null,
+      metadata: (metadata || null) as Prisma.InputJsonValue,
     }
   })
 }

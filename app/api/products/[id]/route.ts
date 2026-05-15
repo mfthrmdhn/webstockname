@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authMiddleware, AuthenticatedRequest } from '@/middleware/auth'
 import { rbacMiddleware } from '@/middleware/rbac'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 
 const cuidSchema = z.string().cuid()
 

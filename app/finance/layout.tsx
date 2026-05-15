@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { FinanceNav } from '@/components/FinanceNav'
 import { ToastProvider } from '@/components/toast'
 

@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getAccessToken } from '@/lib/auth/client'
 import { decodeAccessToken } from '@/lib/auth/decode'
 
 export default function DashboardRouter() {
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const token = getAccessToken()
@@ -42,8 +41,6 @@ export default function DashboardRouter() {
     } catch (error) {
       console.error('Dashboard router error:', error)
       router.push('/login')
-    } finally {
-      setIsLoading(false)
     }
   }, [router])
 

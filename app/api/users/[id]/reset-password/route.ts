@@ -25,9 +25,10 @@ const resetPasswordSchema = z.object({
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await authMiddleware(request as AuthenticatedRequest)
+  const { id } = await params
   if (authResult) return authResult
 
   const rbacResult = await rbacMiddleware(['SUPERADMIN'])(
@@ -37,14 +38,13 @@ export async function POST(
 
   try {
     const prisma = (await import('@/lib/db')).default
-    const { id } = params
     const body = await request.json()
 
     // Validate request body
     const validation = resetPasswordSchema.safeParse(body)
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid input', details: validation.error.errors },
+        { error: 'Invalid input', details: validation.error.issues },
         { status: 400 }
       )
     }

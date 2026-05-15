@@ -9,7 +9,7 @@ import { logAction } from '@/lib/audit/logger'
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await authMiddleware(request as AuthenticatedRequest)
   if (authResult) return authResult
@@ -21,7 +21,7 @@ export async function POST(
 
   try {
     const prisma = (await import('@/lib/db')).default
-    const { id } = params
+    const { id } = await params
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({

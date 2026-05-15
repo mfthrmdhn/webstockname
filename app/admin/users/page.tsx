@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -72,7 +72,7 @@ export default function UsersPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [deactivateOpen, setDeactivateOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [roles, setRoles] = useState<string[]>(['SUPERADMIN', 'FINANCE', 'CASHIER'])
+  const [roles] = useState<string[]>(['SUPERADMIN', 'FINANCE', 'CASHIER'])
 
   // Form states
   const [createForm, setCreateForm] = useState<CreateUserForm>({
@@ -126,7 +126,7 @@ export default function UsersPage() {
 
       if (!validation.success) {
         const errors: Record<string, string> = {}
-        validation.error.errors.forEach((err) => {
+        validation.error.issues.forEach((err) => {
           errors[err.path[0] as string] = err.message
         })
         setCreateErrors(errors)
@@ -175,7 +175,7 @@ export default function UsersPage() {
 
       if (!validation.success) {
         const errors: Record<string, string> = {}
-        validation.error.errors.forEach((err) => {
+        validation.error.issues.forEach((err) => {
           errors[err.path[0] as string] = err.message
         })
         setEditErrors(errors)

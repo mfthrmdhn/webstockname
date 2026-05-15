@@ -15,7 +15,7 @@ const updateUserSchema = z.object({
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await authMiddleware(request as AuthenticatedRequest)
   if (authResult) return authResult
@@ -27,14 +27,14 @@ export async function PATCH(
 
   try {
     const prisma = (await import('@/lib/db')).default
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
 
     // Validate request body
     const validation = updateUserSchema.safeParse(body)
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid input', details: validation.error.errors },
+        { error: 'Invalid input', details: validation.error.issues },
         { status: 400 }
       )
     }

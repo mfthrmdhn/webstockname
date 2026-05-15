@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const validation = createProductSchema.safeParse(body)
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid input', details: validation.error.errors },
+        { error: 'Invalid input', details: validation.error.issues },
         { status: 400 }
       )
     }

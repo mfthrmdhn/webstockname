@@ -22,11 +22,6 @@ const createUserSchema = z.object({
   role: z.string().min(1)
 })
 
-const updateUserSchema = z.object({
-  username: z.string().min(3).max(50).optional(),
-  role: z.string().min(1).optional()
-})
-
 /**
  * POST /api/users - Create a new user (SUPERADMIN only)
  */
@@ -47,7 +42,7 @@ export async function POST(request: NextRequest) {
     const validation = createUserSchema.safeParse(body)
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Invalid input', details: validation.error.errors },
+        { error: 'Invalid input', details: validation.error.issues },
         { status: 400 }
       )
     }

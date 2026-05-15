@@ -7,6 +7,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// prisma/schema.prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -14,8 +15,8 @@ datasource db {
 
 // Role reference table - immutable roles: SUPERADMIN, FINANCE, CASHIER
 model Role {
-  id    String   @id @default(cuid())
-  name  String   @unique // SUPERADMIN, FINANCE, CASHIER
+  id        String   @id @default(cuid())
+  name      String   @unique // SUPERADMIN, FINANCE, CASHIER
   createdAt DateTime @default(now()) @map("created_at")
 
   users User[]
@@ -35,12 +36,12 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
   createdBy    String?  @map("created_by") // foreign key to user who created this user
 
-  auditLogs      AuditLog[]
-  refreshTokens  RefreshToken[]
-  cashierSales     Sale[] @relation("CashierSales")
-  salespersonSales Sale[] @relation("SalespersonSales")
-  salespersonIncentives Incentive[] @relation("SalespersonIncentives")
-  enteredIncentives     Incentive[] @relation("EnteredByIncentives")
+  auditLogs             AuditLog[]
+  refreshTokens         RefreshToken[]
+  cashierSales          Sale[]         @relation("CashierSales")
+  salespersonSales      Sale[]         @relation("SalespersonSales")
+  salespersonIncentives Incentive[]    @relation("SalespersonIncentives")
+  enteredIncentives     Incentive[]    @relation("EnteredByIncentives")
 
   @@index([roleId])
   @@map("users")
@@ -51,7 +52,7 @@ model AuditLog {
   id         String   @id @default(cuid())
   userId     String   @map("user_id")
   user       User     @relation(fields: [userId], references: [id])
-  action     String   // LOGIN, LOGOUT, USER_CREATE, USER_EDIT, USER_DEACTIVATE, ROLE_ASSIGN
+  action     String // LOGIN, LOGOUT, USER_CREATE, USER_EDIT, USER_DEACTIVATE, ROLE_ASSIGN
   entityType String   @map("entity_type") // USER, ROLE, SYSTEM
   entityId   String?  @map("entity_id") // ID of affected resource, null for system actions
   metadata   Json?
@@ -67,7 +68,7 @@ model RefreshToken {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   // Hash of the refresh token (NOT plaintext)
+  tokenHash String // Hash of the refresh token (NOT plaintext)
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -78,17 +79,17 @@ model RefreshToken {
 
 // Products table - product catalog with pricing and stock quantities
 model Product {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   name         String
-  sku          String    @unique
+  sku          String   @unique
   category     String?
-  sellingPrice Decimal   @map("selling_price") @db.Decimal(10, 2)
-  cost         Decimal   @db.Decimal(10, 2)
-  storeQty     Int       @default(0) @map("store_qty")
-  warehouseQty Int       @default(0) @map("warehouse_qty")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedBy    String?   @map("updated_by")
-  isActive     Boolean   @default(true) @map("is_active")
+  sellingPrice Decimal  @map("selling_price") @db.Decimal(10, 2)
+  cost         Decimal  @db.Decimal(10, 2)
+  storeQty     Int      @default(0) @map("store_qty")
+  warehouseQty Int      @default(0) @map("warehouse_qty")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedBy    String?  @map("updated_by")
+  isActive     Boolean  @default(true) @map("is_active")
 
   saleItems SaleItem[]
 
@@ -98,15 +99,15 @@ model Product {
 }
 
 model Sale {
-  id            String     @id @default(cuid())
-  cashierId     String     @map("cashier_id")
-  cashier       User       @relation("CashierSales", fields: [cashierId], references: [id])
-  salespersonId String     @map("salesperson_id")
-  salesperson   User       @relation("SalespersonSales", fields: [salespersonId], references: [id])
-  paymentMethod String     @map("payment_method")
-  total         Decimal    @db.Decimal(10, 2)
-  itemCount     Int        @map("item_count")
-  createdAt     DateTime   @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  cashierId     String   @map("cashier_id")
+  cashier       User     @relation("CashierSales", fields: [cashierId], references: [id])
+  salespersonId String   @map("salesperson_id")
+  salesperson   User     @relation("SalespersonSales", fields: [salespersonId], references: [id])
+  paymentMethod String   @map("payment_method")
+  total         Decimal  @db.Decimal(10, 2)
+  itemCount     Int      @map("item_count")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   items SaleItem[]
 
