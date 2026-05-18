@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/components/toast'
 import { ShoppingCart, Search, Plus, Minus, X } from 'lucide-react'
-import { getAccessToken, fetchWithRefresh } from '@/lib/auth/client'
+import { fetchWithRefresh } from '@/lib/auth/client'
 
 interface Product {
   id: string
