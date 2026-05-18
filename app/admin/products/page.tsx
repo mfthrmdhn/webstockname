@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { fetchWithRefresh } from '@/lib/auth/client'
 import {
   Dialog,
   DialogContent,
@@ -103,17 +104,10 @@ export default function ProductsPage() {
 
   // Fetch products
   useEffect(() => {
-    const token = localStorage.getItem('accessToken')
-    if (!token) return
-
     const fetchProducts = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/products', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+        const response = await fetchWithRefresh('/api/products')
 
         if (!response.ok) {
           throw new Error('Failed to fetch products')
@@ -153,17 +147,10 @@ export default function ProductsPage() {
         return
       }
 
-      const token = localStorage.getItem('accessToken')
-      if (!token) {
-        addToast('Not authenticated', 'error')
-        return
-      }
-
-      const response = await fetch('/api/products', {
+      const response = await fetchWithRefresh('/api/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(validation.data),
       })
@@ -240,17 +227,15 @@ export default function ProductsPage() {
         return
       }
 
-      const token = localStorage.getItem('accessToken')
-      if (!token || !editingProduct) {
+      if (!editingProduct) {
         addToast('Not authenticated', 'error')
         return
       }
 
-      const response = await fetch(`/api/products/${editingProduct.id}`, {
+      const response = await fetchWithRefresh(`/api/products/${editingProduct.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(validation.data),
       })
@@ -286,17 +271,8 @@ export default function ProductsPage() {
 
     try {
       setDeleteHardPending(true)
-      const token = localStorage.getItem('accessToken')
-      if (!token) {
-        addToast('Not authenticated', 'error')
-        return
-      }
-
-      const response = await fetch(`/api/products/${deletingProduct.id}`, {
+      const response = await fetchWithRefresh(`/api/products/${deletingProduct.id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       })
 
       if (!response.ok) {
@@ -330,17 +306,10 @@ export default function ProductsPage() {
 
     try {
       setDeleteSoftDeletePending(true)
-      const token = localStorage.getItem('accessToken')
-      if (!token) {
-        addToast('Not authenticated', 'error')
-        return
-      }
-
-      const response = await fetch(`/api/products/${deletingProduct.id}`, {
+      const response = await fetchWithRefresh(`/api/products/${deletingProduct.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ is_active: false }),
       })
