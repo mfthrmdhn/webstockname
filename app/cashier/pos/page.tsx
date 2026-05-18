@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/components/toast'
 import { ShoppingCart, Search, Plus, Minus, X } from 'lucide-react'
-import { getAccessToken } from '@/lib/auth/client'
+import { getAccessToken, fetchWithRefresh } from '@/lib/auth/client'
 
 interface Product {
   id: string
@@ -65,12 +65,8 @@ export default function PosPage() {
   // Fetch CASHIER staff list on mount
   useEffect(() => {
     const fetchStaff = async () => {
-      const token = getAccessToken()
-      if (!token) return
       try {
-        const res = await fetch('/api/cashier/staff', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const res = await fetchWithRefresh('/api/cashier/staff')
         if (res.ok) setStaff(await res.json())
       } catch {
         addToast('Failed to load staff list', 'error')
@@ -86,12 +82,9 @@ export default function PosPage() {
       return
     }
     const timer = setTimeout(async () => {
-      const token = getAccessToken()
-      if (!token) return
       try {
-        const res = await fetch(
-          `/api/cashier/products?search=${encodeURIComponent(searchQuery)}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const res = await fetchWithRefresh(
+          `/api/cashier/products?search=${encodeURIComponent(searchQuery)}`
         )
         if (res.ok) setSearchResults(await res.json())
       } catch {
@@ -156,12 +149,6 @@ export default function PosPage() {
     if (!canCheckout) return
     setCheckingOut(true)
     try {
-      const token = getAccessToken()
-      if (!token) {
-        addToast('Not authenticated', 'error')
-        return
-      }
-
       const body: Record<string, unknown> = {
         items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
         salespersonId,
@@ -171,11 +158,10 @@ export default function PosPage() {
         body.amountReceived = parsedAmountReceived
       }
 
-      const res = await fetch('/api/cashier/sales', {
+      const res = await fetchWithRefresh('/api/cashier/sales', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(body),
       })
