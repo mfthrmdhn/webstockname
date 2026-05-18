@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { fetchWithRefresh } from '@/lib/auth/client'
 import {
   Dialog,
   DialogContent,
@@ -89,17 +90,10 @@ export default function UsersPage() {
 
   // Fetch users
   useEffect(() => {
-    const token = localStorage.getItem('accessToken')
-    if (!token) return
-
     const fetchUsers = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/users', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+        const response = await fetchWithRefresh('/api/users')
 
         if (!response.ok) {
           throw new Error('Failed to fetch users')
@@ -133,17 +127,10 @@ export default function UsersPage() {
         return
       }
 
-      const token = localStorage.getItem('accessToken')
-      if (!token) {
-        addToast('Not authenticated', 'error')
-        return
-      }
-
-      const response = await fetch('/api/users', {
+      const response = await fetchWithRefresh('/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(validation.data),
       })
@@ -182,17 +169,10 @@ export default function UsersPage() {
         return
       }
 
-      const token = localStorage.getItem('accessToken')
-      if (!token) {
-        addToast('Not authenticated', 'error')
-        return
-      }
-
-      const response = await fetch(`/api/users/${selectedUser.id}`, {
+      const response = await fetchWithRefresh(`/api/users/${selectedUser.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(validation.data),
       })
@@ -223,17 +203,8 @@ export default function UsersPage() {
     if (!selectedUser) return
 
     try {
-      const token = localStorage.getItem('accessToken')
-      if (!token) {
-        addToast('Not authenticated', 'error')
-        return
-      }
-
-      const response = await fetch(`/api/users/${selectedUser.id}/deactivate`, {
+      const response = await fetchWithRefresh(`/api/users/${selectedUser.id}/deactivate`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       })
 
       if (!response.ok) {
