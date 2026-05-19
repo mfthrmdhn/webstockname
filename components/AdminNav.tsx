@@ -5,12 +5,11 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/toast'
-import { Users, Package, FileText, LogOut, BarChart3, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react'
+import { Users, Package, FileText, LogOut, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react'
 import { logout } from '@/lib/auth/client'
 
 export function AdminNav() {
-  const [isExpanded, setIsExpanded] = useState(true)
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const { addToast } = useToast()
@@ -49,28 +48,7 @@ export function AdminNav() {
   ]
 
   return (
-    <>
-      {/* Mobile Toggle Button */}
-      <button
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg hover:bg-gray-100 transition-colors bg-white border border-gray-200"
-        aria-label="Toggle menu"
-      >
-        {isMobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </button>
-
-      {/* Mobile Backdrop */}
-      {isMobileOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
-          onClick={() => setIsMobileOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <nav className={`${
-        isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      } ${isExpanded ? 'w-64' : 'w-20'} bg-white border-r border-gray-200 h-screen sticky top-0 flex flex-col transition-all duration-300 fixed md:relative z-40 md:z-auto`}>
+    <nav className={`${isExpanded ? 'w-64' : 'w-16'} bg-white border-r border-gray-200 h-screen sticky top-0 flex flex-col transition-all duration-300 shrink-0`}>
       <div className={`${isExpanded ? 'p-6' : 'p-4'} border-b border-gray-200`}>
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -127,6 +105,5 @@ export function AdminNav() {
         </Button>
       </div>
     </nav>
-    </>
   )
 }

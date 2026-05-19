@@ -9,10 +9,12 @@ export default function AdminLayout({
 }) {
   return (
     <ToastProvider>
-      <AdminNav />
-      <main className="flex-1 overflow-auto h-screen">
-        {children}
-      </main>
+      <div className="flex h-screen">
+        <AdminNav />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
     </ToastProvider>
   )
 }
