@@ -65,6 +65,7 @@ export default function ProductsPage() {
   const { addToast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [showMobileView, setShowMobileView] = useState(false)
 
   // Create dialog state
   const [createOpen, setCreateOpen] = useState(false)

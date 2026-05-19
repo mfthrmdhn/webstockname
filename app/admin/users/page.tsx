@@ -240,17 +240,17 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">User Management</h1>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">User Management</h1>
         <div className="text-gray-500">Loading users...</div>
       </div>
     )
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">User Management</h1>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -335,8 +335,8 @@ export default function UsersPage() {
         </Dialog>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200">
-        <Table>
+      <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+        <Table className="w-full min-w-full">
           <TableHeader>
             <TableRow>
               <TableHead>Username</TableHead>

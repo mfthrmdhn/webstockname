@@ -68,11 +68,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h1 className="text-2xl font-bold text-center mb-6">WebStockName</h1>
-          <h2 className="text-lg font-semibold text-center mb-6">Sign In</h2>
+        <div className="bg-white rounded-lg shadow-md p-6 sm:p-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">WebStockName</h1>
+          <h2 className="text-lg sm:text-xl font-semibold text-center mb-6 sm:mb-8 text-gray-700">Sign In</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -116,8 +116,9 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-gray-600 mt-4">
-            Demo credentials: superadmin / TestPass123!
+          <p className="text-center text-xs sm:text-sm text-gray-600 mt-6 sm:mt-8 px-2">
+            Demo credentials: <br className="sm:hidden" />
+            <span className="font-mono text-gray-800">superadmin / TestPass123!</span>
           </p>
         </div>
       </div>
