@@ -6,3 +6,4 @@ node_modules
 /generated/prisma
 .prisma/
 .next/
+next-env.d.ts
