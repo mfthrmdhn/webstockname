@@ -9,14 +9,10 @@ export default function CashierLayout({
 }) {
   return (
     <ToastProvider>
-      <div className="flex h-screen bg-gray-50 flex-col md:flex-row">
-        <div className="hidden md:block">
-          <CashierNav />
-        </div>
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
-      </div>
+      <CashierNav />
+      <main className="flex-1 overflow-auto h-screen">
+        {children}
+      </main>
     </ToastProvider>
   )
 }

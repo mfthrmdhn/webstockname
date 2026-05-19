@@ -9,14 +9,10 @@ export default function FinanceLayout({
 }) {
   return (
     <ToastProvider>
-      <div className="flex h-screen bg-gray-50 flex-col md:flex-row">
-        <div className="hidden md:block">
-          <FinanceNav />
-        </div>
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
-      </div>
+      <FinanceNav />
+      <main className="flex-1 overflow-auto h-screen">
+        {children}
+      </main>
     </ToastProvider>
   )
 }
